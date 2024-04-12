@@ -1,6 +1,7 @@
 {
     "name": "offmania9/boostack-framework",
     "description": "The Boostack core framework.",
+    "version": "6.1",
     "keywords": ["framework", "boostack"],
     "license": "MIT",
     "homepage": "https://getboostack.com",
