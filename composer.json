@@ -1,35 +1,42 @@
 {
-    "name": "offmania9/boostack-framework",
-    "description": "The Boostack core framework.",
-    "version": "6.1",
-    "keywords": ["framework", "boostack"],
-    "license": "MIT",
-    "homepage": "https://getboostack.com",
-    "authors": [
-      {
-        "name": "Stefano Spagnolo",
-        "email": "s.spagnolo@hotmail.it"
-      },
-      {
-        "name": "Alessio Debernardi",
-        "email": "alessio.debernardi22@gmail.com"
-      }
-    ],
-    "require": {
-        "php": ">=7.4",
-        "firebase/php-jwt": "^6.10"
-      },
-      "autoload": {
-        "psr-4": {
-          "Boostack\\": "src/"
-        }
-      },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "composer/package-versions-deprecated": true
-        }
+  "name": "offmania9/boostack-framework",
+  "description": "The Boostack core framework.",
+  "version": "6.1",
+  "keywords": [
+    "framework",
+    "boostack"
+  ],
+  "license": "MIT",
+  "homepage": "https://getboostack.com",
+  "authors": [
+    {
+      "name": "Stefano Spagnolo",
+      "email": "s.spagnolo@hotmail.it"
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    {
+      "name": "Alessio Debernardi",
+      "email": "alessio.debernardi22@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4",
+    "firebase/php-jwt": "^6.10"
+  },
+  "autoload": {
+    "files": [
+      "src/libs/helpers.php",
+      "src/libs/utilities.second.lib.php"
+    ],
+    "psr-4": {
+      "Boostack\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "composer/package-versions-deprecated": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
