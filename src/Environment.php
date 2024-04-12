@@ -16,7 +16,6 @@ class Environment
     public static function init()
     {
         try {
-            require_once($_SERVER["DOCUMENT_ROOT"] . "/vendor/boostack-framework/core/libs/helpers.php");
             Request::init();
             Config::init();
 
