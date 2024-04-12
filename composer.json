@@ -1,0 +1,34 @@
+{
+    "name": "offmania9/boostack-framework",
+    "description": "The Boostack core framework.",
+    "keywords": ["framework", "boostack"],
+    "license": "MIT",
+    "homepage": "https://getboostack.com",
+    "authors": [
+      {
+        "name": "Stefano Spagnolo",
+        "email": "s.spagnolo@hotmail.it"
+      },
+      {
+        "name": "Alessio Debernardi",
+        "email": "alessio.debernardi22@gmail.com"
+      }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "firebase/php-jwt": "^6.10"
+      },
+      "autoload": {
+        "psr-4": {
+          "Boostack\\": "src/"
+        }
+      },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
