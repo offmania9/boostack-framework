@@ -1,6 +1,7 @@
 <?php
 
 namespace Boostack\Models;
+
 use Boostack\Models\Session\Session;
 
 /**
@@ -322,14 +323,14 @@ class Request
     public static function getFriendlyUrl($virtualPath)
     {
         if (Config::get('session_on')) {
+            $langUrl = "";
             $langUrl = Session::get("SESS_LANGUAGE") . "/";
-            if (!Config::get('show_default_language_in_URL') && Session::get("SESS_LANGUAGE") == Config::get('language_default'))
-                $langUrl = "";
+            if (Config::get('show_default_language_in_URL'))
+                $langUrl = Session::get("SESS_LANGUAGE") . "/";
             return Config::get('url') . $langUrl . $virtualPath;
         }
         return Config::get('url') . $virtualPath;
     }
-
 
     /**
      * Redirects the user to the specified URL.
@@ -444,7 +445,7 @@ class Request
         return substr($cookieValue, 32) == md5(self::getIpAddress() . self::getUserAgent());
     }
 
-        /**
+    /**
      * Checks if the time since the last request is within the accepted time limit.
      *
      * @param int|string $timeLastRequest The time of the last request.

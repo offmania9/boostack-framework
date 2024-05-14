@@ -80,6 +80,15 @@ class Language
             $language = $defaultLanguage;
         } elseif (!empty(Request::hasQueryParam("lang"))) {
             $language = Request::getQueryParam("lang");
+        } else {
+            if (Config::get("session_on") && \Boostack\Models\Session\Session::get("SESS_LANGUAGE") !== "") { // if is set in the user session
+                $language = \Boostack\Models\Session\Session::get("SESS_LANGUAGE");
+            } else { // if isn't set in the user session, fetch it from browser
+                if (Request::hasServerParam('HTTP_ACCEPT_LANGUAGE')) {
+                    $language = explode(',', Request::getServerParam('HTTP_ACCEPT_LANGUAGE'));
+                    $language = strtolower(substr(chop($language[0]), 0, 2));
+                }
+            }
         }
 
         if (in_array($language, Config::get("enabled_languages"))) {
