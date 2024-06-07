@@ -21,7 +21,7 @@ class Language
     {
     }
 
-    private static $translatedLabels = null;
+    protected static $translatedLabels = null;
     /**
      * Initialize the language settings.
      */
