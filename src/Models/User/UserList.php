@@ -1,10 +1,13 @@
 <?php
+
 namespace Boostack\Models\User;
+
 use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
 use Boostack\Models\User\User_Entity;
+
 /**
  * Boostack: User_List.Class.php
  * ========================================================================
@@ -57,9 +60,9 @@ class UserList extends \Boostack\Models\BaseList
     public function loadAll($orderColumn = null, $orderType = null)
     {
         try {
-            $ob = $orderColumn == null ? "" : " ORDER BY " . $orderColumn;
-            $ot = $orderColumn == null ? "" : " " . $orderType;
-            $sql = "SELECT * " . $this->getSQLFromJoinPart();
+            $ob = $orderColumn == null ? "" : " ORDER BY " . $orderColumn . " ";
+            $ot = $orderType == null ? "" : " " . $orderType . " ";
+            $sql = "SELECT * " . $this->getSQLFromJoinPart() . $ob . $ot;
             $q = $this->PDO->prepare($sql);
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);

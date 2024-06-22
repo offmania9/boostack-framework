@@ -26,9 +26,6 @@ class Environment
                 error_reporting(0);
                 ini_set('display_errors', 0);
             }
-            require_once($_SERVER["DOCUMENT_ROOT"] . "/my/pre_content.php");
-
-            
 
             if (Config::get('database_on')) {
                 Database_PDO::getInstance(Config::get('db_host'), Config::get('db_name'), Config::get('db_username'), Config::get('db_password'), Config::get('db_port'));
@@ -47,6 +44,8 @@ class Environment
             if (Config::get('language_on')) {
                 Language::init();
             }
+
+            require_once($_SERVER["DOCUMENT_ROOT"] . "/my/pre_content.php");
         } catch (\Exception $e) {
             $short_message = "System error. See log files.";
             $message = $short_message . $e->getMessage() . $e->getTraceAsString() . "\n";

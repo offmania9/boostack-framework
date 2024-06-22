@@ -309,7 +309,7 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             if ($withoutTraced) {
                 $sql = "SELECT column_name FROM information_schema.columns 
             WHERE table_name = '" . $this->baseClassTablename . "' AND table_schema='" . Config::get("db_name") . "' 
-AND column_name NOT IN ('created_at', 'last_update','last_access','created_at_datetime')";
+AND column_name NOT IN ('created_at', 'last_update','last_access')";
             } else {
                 $sql = "DESCRIBE " . $this->baseClassTablename;
             }
