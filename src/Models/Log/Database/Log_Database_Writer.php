@@ -93,7 +93,7 @@ class Log_Database_Writer
         $sql = "INSERT INTO " . self::TABLENAME . "  (id ,datetime , level, username, ip ,useragent ,referrer ,query ,message)
 				VALUES(NULL, :time , :level, :username, :ip , :useragent, :referrer, :query, :message)";
         $q = $this->PDO->prepare($sql);
-        $q->bindValue(':time', time());
+        $q->bindValue(':time', date('Y-m-d H:i:s', time()));
         $q->bindValue(':level', $level);
         $q->bindValue(':username', $this->username);
         $q->bindValue(':ip', $this->ip);

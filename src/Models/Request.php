@@ -324,7 +324,6 @@ class Request
     {
         if (Config::get('session_on')) {
             $langUrl = "";
-            $langUrl = Session::get("SESS_LANGUAGE") . "/";
             if (Config::get('show_default_language_in_URL'))
                 $langUrl = Session::get("SESS_LANGUAGE") . "/";
             return Config::get('url') . $langUrl . $virtualPath;
