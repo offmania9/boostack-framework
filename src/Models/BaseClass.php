@@ -539,78 +539,83 @@ abstract class BaseClass implements \JsonSerializable
 
         return true;
     }
+
     /**
-     * Retrieve the fields of the object's database table along with their metadata.
+     * Retrieves the fields and their metadata for the current table, including data types,
+     * maximum lengths, and foreign key information.
      *
-     * @return array An array containing information about the fields of the database table.
+     * @return array An array of records with column metadata and foreign key information.
      */
     public function getFields()
     {
-        // Obtain the list of columns and data types from the table using INFORMATION_SCHEMA
-        $query = "SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = :tableName AND TABLE_SCHEMA = :tableSchema";
+        $query = "
+        SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = :tableName 
+        AND TABLE_SCHEMA = :tableSchema
+        ";
         $stmt = $this->PDO->prepare($query);
         $stmt->execute(['tableName' => static::TABLENAME, 'tableSchema' => Config::get("db_name")]);
         $columns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        // Query to retrieve all data from the table
         $ids = (!empty($this->id)) ? " WHERE id=" . $this->id : " WHERE id=1";
         $query = "SELECT * FROM " . static::TABLENAME . $ids;
         $stmt = $this->PDO->query($query);
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $resultArray = [];
 
-        // Iterate over each record
         foreach ($data as $row) {
             $record = [];
             foreach ($columns as $columnInfo) {
                 $columnName = $columnInfo['COLUMN_NAME'];
                 $columnType = $columnInfo['COLUMN_TYPE'];
                 $datatype = $columnInfo['DATA_TYPE'];
-                $maxLength = $columnInfo['CHARACTER_MAXIMUM_LENGTH']; // Maximum length for VARCHAR
+                $maxLength = $columnInfo['CHARACTER_MAXIMUM_LENGTH'];
 
-                if ((!empty($this->id))) {
+                if (!empty($this->id)) {
                     $record[$columnName] = [
                         'value' => $row[$columnName],
-                        'data_type' => $datatype, // Data type
-                        'column_type' => $columnType, // Column type
-                        'max_length' => $maxLength, // Maximum length for VARCHAR
+                        'data_type' => $datatype,
+                        'column_type' => $columnType,
+                        'max_length' => $maxLength,
                         'foreign' => null
                     ];
                 } else {
                     $record[$columnName] = [
-                        'data_type' => $datatype, // Data type
-                        'column_type' => $columnType, // Column type
-                        'max_length' => $maxLength, // Maximum length for VARCHAR
+                        'data_type' => $datatype,
+                        'column_type' => $columnType,
+                        'max_length' => $maxLength,
                         'foreign' => null
                     ];
                 }
 
-                // Check for foreign keys
-                if (str_contains($columnName, '_id') || str_contains($columnName, 'id_')) {
-                    $foreignKeysQuery = "
-                    SELECT 
-                        COLUMN_NAME, 
-                        CONSTRAINT_NAME, 
-                        REFERENCED_TABLE_NAME, 
-                        REFERENCED_COLUMN_NAME 
-                    FROM 
-                        information_schema.KEY_COLUMN_USAGE 
-                    WHERE 
-                        TABLE_NAME = :tableName 
-                        AND COLUMN_NAME = :columnName 
-                        AND CONSTRAINT_NAME != 'PRIMARY'
-                ";
+                $foreignKeysQuery = "
+                SELECT 
+                    COLUMN_NAME, 
+                    CONSTRAINT_NAME, 
+                    REFERENCED_TABLE_NAME, 
+                    REFERENCED_COLUMN_NAME 
+                FROM 
+                    information_schema.KEY_COLUMN_USAGE 
+                WHERE 
+                    TABLE_NAME = :tableName 
+                    AND COLUMN_NAME = :columnName 
+                    AND CONSTRAINT_NAME != 'PRIMARY'
+            ";
 
-                    $stmt = $this->PDO->prepare($foreignKeysQuery);
-                    $stmt->execute(['tableName' => static::TABLENAME, 'columnName' => $columnName]);
-                    $foreignKeys = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $stmt = $this->PDO->prepare($foreignKeysQuery);
+                $stmt->execute(['tableName' => static::TABLENAME, 'columnName' => $columnName]);
+                $foreignKeys = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                if (!empty($foreignKeys)) {
                     $record[$columnName]["foreign"] = $foreignKeys;
                 }
             }
             $resultArray[] = $record;
         }
-        return ($resultArray);
+        return $resultArray;
     }
+
 
     /**
      * Sets object properties from an array, excluding specified keys, and saves the object.
@@ -624,6 +629,9 @@ abstract class BaseClass implements \JsonSerializable
     {
         foreach ($array as $key => $value) {
             if (in_array($key, $arrayExcluded)) continue;
+            if ($value === "NULL") {
+                $value = NULL;
+            }
             $obj->{$key} = $value;
         }
         $obj->save();
