@@ -1,5 +1,7 @@
 <?php
+
 namespace Boostack\Models\Log;
+
 use Boostack\Models\Log\Database\Log_Database_Writer;
 use Boostack\Models\Log\File\Log_File_Writer;
 use Boostack\Models\Config;

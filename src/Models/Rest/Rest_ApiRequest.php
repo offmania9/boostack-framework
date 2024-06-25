@@ -53,6 +53,6 @@ class Rest_ApiRequest extends \Boostack\Models\BaseClassTraced
 
     public function __construct($id = NULL)
     {
-        parent::__construct($id);
+        parent::init($id);
     }
 }
