@@ -26,7 +26,7 @@ abstract class BaseClassTraced extends \Boostack\Models\BaseClass
      * Constructor.
      * @param null $id
      */
-    public function __construct($id = null)
+    protected function init($id = null)
     {
         $this->default_values['created_at'] = '';
         $this->default_values['last_update'] = '';
