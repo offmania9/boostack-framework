@@ -1,6 +1,6 @@
 <?php
 
-namespace My\Models;
+namespace Boostack\Models\Upload;
 
 use Boostack\Models\BaseClassTraced;
 use Boostack\Models\Upload\Upload_File;

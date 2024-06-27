@@ -1,9 +1,9 @@
 <?php
 
-namespace My\Models;
+namespace Boostack\Models\Upload;
 
 use Boostack\Models\BaseList;
-use My\Models\Asset;
+use Boostack\Models\Upload\Asset;
 
 class AssetList extends BaseList
 {
