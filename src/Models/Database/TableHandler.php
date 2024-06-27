@@ -28,6 +28,9 @@ class TableHandler
     /** @var array The array of foreign keys in the table. */
     private $foreignKeys = [];
 
+    /** @var array The array of indices in the table. */
+    private $indices = [];
+
     /**
      * TableHandler constructor.
      */
@@ -55,6 +58,20 @@ class TableHandler
     public function addColumn($columnName, $definition)
     {
         $this->columns[$columnName] = $definition;
+    }
+
+    /**
+     * Add an index to a column.
+     *
+     * @param string $columnName The name of the column.
+     * @param string $indexType The type of the index (e.g., 'INDEX', 'UNIQUE', 'PRIMARY KEY').
+     */
+    public function addIndex($columnName, $indexType = 'INDEX')
+    {
+        $this->indices[] = [
+            'column' => $columnName,
+            'type' => $indexType,
+        ];
     }
 
     /**
@@ -96,7 +113,16 @@ class TableHandler
             $foreignKeysString .= "FOREIGN KEY (`{$fk['column']}`) REFERENCES `{$fk['referenced_table']}`(`{$fk['referenced_column']}`) ON DELETE {$fk['on_delete']} ON UPDATE {$fk['on_update']}, ";
         }
 
-        $columnsString = rtrim($columnsString . $foreignKeysString, ', ');
+        $indicesString = '';
+        foreach ($this->indices as $index) {
+            if ($index['type'] == 'PRIMARY KEY') {
+                $indicesString .= "{$index['type']} (`{$index['column']}`), ";
+            } else {
+                $indicesString .= "{$index['type']} (`{$index['column']}`), ";
+            }
+        }
+
+        $columnsString = rtrim($columnsString . $foreignKeysString . $indicesString, ', ');
 
         $sql = "CREATE TABLE IF NOT EXISTS `{$this->tableName}` ($columnsString)";
 
@@ -116,6 +142,7 @@ class TableHandler
         $this->tableName = null;
         $this->columns = [];
         $this->foreignKeys = [];
+        $this->indices = [];
     }
 
     /**
@@ -197,13 +224,13 @@ class TableHandler
         $classContent .= $this->generatePropertiesAndDefaults();
 
         // Define TABLENAME constant
-        $classContent .= "\n    const TABLENAME = \"{$this->tableName}\";\n\n";
+        $classContent .= "\n    const TABLENAME = \"{$this->tableName}\";\n";
 
         // Constructor
         $classContent .= "    public function __construct(\$id = NULL)\n";
         $classContent .= "    {\n";
         $classContent .= "        parent::init(\$id);\n";
-        $classContent .= "    }\n\n";
+        $classContent .= "    }\n";
 
         $classContent .= "}\n";
 
@@ -211,20 +238,16 @@ class TableHandler
     }
 
     /**
-     * Check if the table contains traced columns (created_at, last_update, last_access, deleted_at).
+     * Check if the table contains all traced columns (created_at, last_update, last_access, deleted_at).
      *
-     * @return bool True if traced columns are present, false otherwise.
+     * @return bool True if all traced columns are present, false otherwise.
      */
     private function tableContainsTracedColumns()
     {
         $tracedColumns = ['created_at', 'last_update', 'last_access', 'deleted_at'];
-
-        foreach ($this->columns as $columnName => $definition) {
-            if (in_array($columnName, $tracedColumns)) {
-                return true;
-            }
-        }
-        return false;
+        $columnNames = array_keys($this->columns);
+        $missingColumns = array_diff($tracedColumns, $columnNames);
+        return empty($missingColumns);
     }
 
     /**
@@ -253,11 +276,56 @@ class TableHandler
                 $properties .= "        \"$columnName\" => $defaultValue,\n";
             }
         }
-
-        $properties .= "    ];\n\n";
-
+        $properties .= "    ];\n";
         return $properties;
     }
+
+    /**
+     * Get the default value for a column based on its definition.
+     *
+     * @param string $columnName The name of the column.
+     * @param string $columnDefinition The definition of the column from the database.
+     * @return string The PHP representation of the default value for the column.
+     */
+    private function getDefaultForColumn($columnName, $columnDefinition)
+    {
+        // Extract the default value from the column definition
+        if (preg_match("/DEFAULT\s+([^\s,]+)/i", $columnDefinition, $matches)) {
+            $defaultValue = $matches[1];
+
+            // Handle CURRENT_TIMESTAMP() and other expressions without quotes
+            if (stripos($defaultValue, 'CURRENT_TIMESTAMP') !== false) {
+                return "'$defaultValue'";
+            }
+
+            // Check if the default value is a string and needs quotes
+            if (!is_numeric($defaultValue) && strtoupper($defaultValue) !== 'NULL') {
+                return "'$defaultValue'";
+            }
+
+            return $defaultValue;
+        }
+
+        // If no default value is found, determine based on data type and NULL allowance
+        $nullAllowed = (stripos($columnDefinition, 'NULL') !== false && stripos($columnDefinition, 'NOT NULL') === false);
+
+        if ($nullAllowed) {
+            return 'NULL';
+        }
+
+        if (preg_match('/int|bool|float|decimal|double|real/i', $columnDefinition)) {
+            return 0;
+        } elseif (preg_match('/char|varchar|text|blob|binary|enum|set/i', $columnDefinition)) {
+            return "''";
+        } elseif (preg_match('/date|time|year|timestamp|datetime/i', $columnDefinition)) {
+            // Use a common default value for date/time types
+            return "'0000-00-00 00:00:00'";
+        } else {
+            return 'NULL';
+        }
+    }
+
+
 
     /**
      * Generate and save the PHP class file for the table based on database information.
@@ -272,7 +340,7 @@ class TableHandler
 
         // Set table name and columns in the TableHandler instance
         $this->setTableName($this->tableName); // Ensure table name is set
-        $this->columns = $columns;
+        //$this->columns = $columns;
 
         // Generate and save the PHP class file
         $classContent = $this->generateClassContent($namespace, $className);
@@ -329,7 +397,7 @@ class TableHandler
                 $columnName = $column['Field'];
                 $columnType = $column['Type'];
                 // Exclude standard columns if needed (id, created_at, etc.)
-                if (!in_array($columnName, ['id', 'created_at', 'last_update', 'last_access', 'deleted_at'])) {
+                if (!in_array($columnName, ['id'])) { //, 'created_at', 'last_update', 'last_access', 'deleted_at'
                     $tableColumns[$columnName] = $columnType;
                 }
             }
@@ -348,6 +416,7 @@ class TableHandler
      * @param string $listClassName The name of the list class (e.g., "[NomeClasse]List").
      * @return string The PHP class content for the list class.
      */
+
     private function generateListClassContent($namespace, $className, $listClassName)
     {
         $classContent = "<?php\n\n";
@@ -360,33 +429,9 @@ class TableHandler
         $classContent .= "    public function __construct()\n";
         $classContent .= "    {\n";
         $classContent .= "        parent::init();\n";
-        $classContent .= "    }\n\n";
+        $classContent .= "    }\n";
         $classContent .= "}\n";
 
         return $classContent;
-    }
-
-    /**
-     * Get the default value for a column based on its definition.
-     *
-     * @param string $columnName The name of the column.
-     * @param string $columnDefinition The definition of the column from the database.
-     * @return string The PHP representation of the default value for the column.
-     */
-    private function getDefaultForColumn($columnName, $columnDefinition)
-    {
-        // Check if column allows NULL values
-        $nullAllowed = (strpos($columnDefinition, 'NOT NULL') === false);
-
-        // Determine default value based on data type and NULL allowance
-        if (preg_match('/int|bool|decimal/', $columnDefinition)) {
-            return 0;
-        } elseif (preg_match('/char|text/', $columnDefinition)) {
-            return "''";
-        } elseif (preg_match('/datetime|timestamp/', $columnDefinition)) {
-            return $nullAllowed ? 'NULL' : "''";
-        } else {
-            return 'NULL';
-        }
     }
 }
