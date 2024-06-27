@@ -1,7 +1,10 @@
 <?php
+
 namespace Boostack\Models\Upload;
+
 use Boostack\Models\Config;
 use Boostack\Models\Utils\Validator;
+
 /**
  * Boostack: Upload_File.Class.php
  * ========================================================================
@@ -14,17 +17,15 @@ use Boostack\Models\Utils\Validator;
 
 class Upload_File
 {
+    protected $name;
 
+    protected $type;
 
-    private $name;
+    protected $size;
 
-    private $type;
+    protected $tmp_name;
 
-    private $size;
-
-    private $tmp_name;
-
-    private $extension;
+    protected $extension;
 
     /**
      * Constructor for the Upload_File class.
@@ -59,10 +60,10 @@ class Upload_File
         if (strlen($this->name) > Config::get("max_upload_filename_length")) {
             throw new \Exception("Filename is too long");
         }
-        if (!in_array($this->type, Config::get("allowed_file_upload_types"))) {
+        if (Config::get("allowed_file_upload_types") !== "*"  && !in_array($this->type, Config::get("allowed_file_upload_types"))) {
             throw new \Exception("File type is not valid");
         }
-        if (!in_array($this->extension, Config::get("allowed_file_upload_extensions"))) {
+        if (Config::get("allowed_file_upload_extensions") !== "*" && !in_array($this->extension, Config::get("allowed_file_upload_extensions"))) {
             throw new \Exception("File extension is not valid");
         }
         if (!Validator::filename($this->name)) {
@@ -80,7 +81,7 @@ class Upload_File
      * @param bool $overwriteIfExist Whether to overwrite the file if it already exists.
      * @throws \Exception If an error occurs during the file move operation.
      */
-    public function moveTo($path, $filename, $permission = 0755, $overwriteIfExist = false)
+    public function store($path, $filename, $overwriteIfExist = false, $permission = 0755)
     {
         $destinationFullPath = $path . $filename . "." . $this->extension;
         if (!$overwriteIfExist && file_exists($destinationFullPath)) {
@@ -122,6 +123,38 @@ class Upload_File
                 return "File upload stopped by extension";
             default:
                 return "Unknown upload error";
+        }
+    }
+
+    /**
+     * Getter
+     *
+     * @param $property_name
+     * @return mixed
+     * @throws Exception
+     */
+    public function __get($property_name)
+    {
+        if (property_exists($this, $property_name)) {
+            return $this->$property_name;
+        } else {
+            throw new \Exception("Field $property_name not found");
+        }
+    }
+
+    /**
+     * Setter
+     *
+     * @param $property_name
+     * @param $val
+     * @throws Exception
+     */
+    public function __set($property_name, $val)
+    {
+        if (property_exists($this, $property_name)) {
+            $this->$property_name = $val;
+        } else {
+            throw new \Exception("Field $property_name not found");
         }
     }
 }

@@ -313,9 +313,23 @@ class TableHandler
             return 'NULL';
         }
 
+        // Match different column types and assign default values accordingly
         if (preg_match('/int|bool|float|decimal|double|real/i', $columnDefinition)) {
             return 0;
         } elseif (preg_match('/char|varchar|text|blob|binary|enum|set/i', $columnDefinition)) {
+            // Specific handling for SET type
+            if (preg_match('/set/i', $columnDefinition)) {
+                // Extract possible values from the SET definition
+                if (preg_match("/set\s*\((.*?)\)/i", $columnDefinition, $setMatches)) {
+                    $setValues = explode(',', $setMatches[1]);
+                    // Trim and remove quotes from each value
+                    $setValues = array_map(function ($value) {
+                        return trim($value, " '\"");
+                    }, $setValues);
+                    // Return the first value as the default
+                    return "'" . $setValues[0] . "'";
+                }
+            }
             return "''";
         } elseif (preg_match('/date|time|year|timestamp|datetime/i', $columnDefinition)) {
             // Use a common default value for date/time types
@@ -324,7 +338,6 @@ class TableHandler
             return 'NULL';
         }
     }
-
 
 
     /**

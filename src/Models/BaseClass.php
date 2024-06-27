@@ -563,6 +563,9 @@ abstract class BaseClass implements \JsonSerializable
         $stmt = $this->PDO->query($query);
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $resultArray = [];
+        if ($data == null || count($data) == 0) {
+            $data = array(0);
+        }
 
         foreach ($data as $row) {
             $record = [];
