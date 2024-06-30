@@ -98,6 +98,37 @@ class Upload_File
         }
     }
 
+
+    /**
+     * Renames a file to the specified new name.
+     *
+     * @param string $currentFileName The current name (including path) of the file.
+     * @param string $newFileName The new name (including path) for the file.
+     * @param bool $overwriteIfExist Whether to overwrite the file if it already exists.
+     * @throws \Exception If an error occurs during the file rename operation.
+     */
+    public function rename($currentFileName, $newFileName, $overwriteIfExist = false)
+    {
+        if (!file_exists($currentFileName)) {
+            throw new \Exception("File " . $currentFileName . " does not exist.");
+        }
+
+        if (file_exists($newFileName)) {
+            if (!$overwriteIfExist) {
+                throw new \Exception("File " . $newFileName . " already exists.");
+            } else {
+                if (!unlink($newFileName)) {
+                    throw new \Exception("Failed to overwrite existing file " . $newFileName . ".");
+                }
+            }
+        }
+
+        if (!rename($currentFileName, $newFileName)) {
+            throw new \Exception("Error: Could not rename the file " . $currentFileName . " to " . $newFileName . ".");
+        }
+    }
+
+
     /**
      * Converts error code to error message.
      *

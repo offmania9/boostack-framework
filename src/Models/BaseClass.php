@@ -214,11 +214,9 @@ abstract class BaseClass implements \JsonSerializable
      */
     public function delete()
     {
-        if ($this->hasSoftDelete())
-            $this->softDelete();
-        else
-            $this->purge();
+        return $this->hasSoftDelete() ? $this->softDelete() : $this->purge();
     }
+    
     /**
      * Soft delete the object from the database (set 'deleted_at' field to current timestamp).
      *
