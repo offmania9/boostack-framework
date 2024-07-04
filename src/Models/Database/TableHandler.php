@@ -353,8 +353,8 @@ class TableHandler
 
         // Set table name and columns in the TableHandler instance
         $this->setTableName($this->tableName); // Ensure table name is set
-        //$this->columns = $columns;
-
+        if (count($this->columns) == 0)
+            $this->columns = $columns;
         // Generate and save the PHP class file
         $classContent = $this->generateClassContent($namespace, $className);
         $filePath = $this->getClassFilePath($namespace, $className);
