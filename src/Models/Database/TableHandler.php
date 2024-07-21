@@ -47,6 +47,9 @@ class TableHandler
     public function setTableName($tableName)
     {
         $this->tableName = $tableName;
+        $this->columns = [];
+        $this->foreignKeys = [];
+        $this->indices = [];
     }
 
     /**

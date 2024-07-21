@@ -6,6 +6,7 @@ use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
+use Boostack\Models\Session\Session;
 use Boostack\Models\User\User_Entity;
 
 /**
@@ -74,6 +75,51 @@ class UserList extends \Boostack\Models\BaseList
             throw new \PDOException("Database \Exception. Please see log file.");
         }
     }
+
+    /**
+     * get all user ids by privilege
+     *
+     * @param string|null $privilege The users privilege.
+     * @return array The user ids.
+     * @throws \PDOException If a database \Exception occurs.
+     */
+    public static function getIdsByPrivilege(int $privilege = UserPrivilege::ADMIN)
+    {
+        try {
+            $sql = "SELECT id FROM boostack_user WHERE privilege=:privilege";
+            $q = Database_PDO::getInstance()->prepare($sql);
+            $q->bindValue(':privilege', $privilege);
+            $q->execute();
+            $queryResults = $q->fetchAll(\PDO::FETCH_COLUMN);
+            return $queryResults;
+        } catch (\PDOException $PDOEx) {
+            Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
+            throw new \PDOException("Database \Exception. Please see log file.");
+        }
+    }
+
+    /**
+     * get all user ids by privilege without current user
+     *
+     * @param string|null $privilege The users privilege.
+     * @return array The user ids without current user
+     * @throws \PDOException If a database \Exception occurs.
+     */
+    public static function getIdsByPrivilegeWithoutCurrentUser(int $privilege = UserPrivilege::ADMIN)
+    {
+        try {
+            $sql = "SELECT id FROM boostack_user WHERE privilege=:privilege AND id != " . Session::getUserID();
+            $q = Database_PDO::getInstance()->prepare($sql);
+            $q->bindValue(':privilege', $privilege);
+            $q->execute();
+            $queryResults = $q->fetchAll(\PDO::FETCH_COLUMN);
+            return $queryResults;
+        } catch (\PDOException $PDOEx) {
+            Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
+            throw new \PDOException("Database \Exception. Please see log file.");
+        }
+    }
+
 
     /**
      * Fills the object with an array containing arrays of attributes for each instance, invoking the fill method of the individual object.

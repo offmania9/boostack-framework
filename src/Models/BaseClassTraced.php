@@ -50,7 +50,7 @@ abstract class BaseClassTraced extends \Boostack\Models\BaseClass
      */
     public function fill($array)
     {
-        $this->prepare($array);
+        parent::fill($array);
         if ($this->id !== null) {
             $this->setLastAccess();
         }
