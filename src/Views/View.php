@@ -1,6 +1,7 @@
 <?php
 
 namespace Boostack\Views;
+
 use Boostack\Models\Config;
 use Boostack\Exception\Exception_FileNotFound;
 
@@ -34,7 +35,7 @@ abstract class View
             throw new \Exception("Missing 'template' param");
         }
 
-        $templateDir = $_SERVER['DOCUMENT_ROOT'] ."/" . Config::get('template_path');
+        $templateDir = $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get('template_path');
         $templateFile = $templateDir . $template;
 
         if (!file_exists($templateFile)) {
@@ -225,6 +226,30 @@ abstract class View
 
 
     /**
+     * Return the template specified by the parameter.
+     *
+     * @param string $template
+     * @param array|null $parameters
+     * @return string
+     * @throws \Exception
+     */
+    public static function getTemplate(string $template, ?array $parameters = null): string
+    {
+        $file = $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get('template_path') . $template;
+        if (!file_exists($file)) {
+            throw new \Exception("Template file ($file) not found");
+        }
+        $result = file_get_contents($file);
+        if (!empty($parameters)) {
+            foreach ($parameters as $templateParam => $value) {
+                $result = str_replace("[$templateParam]", $value, $result);
+            }
+        }
+        return $result;
+    }
+
+
+    /**
      * Return the mail template specified by the parameter.
      *
      * @param string $mail
@@ -234,7 +259,7 @@ abstract class View
      */
     public static function getMailTemplate(string $mail, ?array $parameters = null): string
     {
-        $file = $_SERVER['DOCUMENT_ROOT'] ."/" . Config::get('mail_template_path') . $mail;
+        $file = $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get('mail_template_path') . $mail;
         if (!file_exists($file)) {
             throw new \Exception("Mail templating file ($file) not found");
         }

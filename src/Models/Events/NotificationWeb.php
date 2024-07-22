@@ -3,6 +3,7 @@
 namespace Boostack\Models\Events;
 
 use Boostack\Models\BaseClassTraced;
+use Boostack\Models\User\User;
 
 class NotificationWeb extends BaseClassTraced
 {
@@ -29,8 +30,9 @@ class NotificationWeb extends BaseClassTraced
             $this->notification_obj = new Notification($this->id_notification);
     }
 
-    public function messageContent($message_content)
+    public function getUserFrom()
     {
-        $this->message_content = $message_content;
+        $parent = new Notification($this->id_notification);
+        return new User($parent->id_user_from);
     }
 }

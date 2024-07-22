@@ -3,7 +3,7 @@
 namespace Boostack\Models\Events;
 
 use Boostack\Models\BaseList;
-use My\Models\Events\Notification;
+use Boostack\Models\Events\Notification;
 
 class NotificationList extends BaseList
 {

@@ -54,8 +54,6 @@ class User_Info extends \Boostack\Models\BaseClass
     protected $pic_big;
     
     protected $sex;
-    
-    protected $name;
 
     /**
      *
@@ -86,8 +84,7 @@ class User_Info extends \Boostack\Models\BaseClass
         "tv" => "",
         "religion" => "",
         "pic_big" => "",
-        "sex" => "",
-        "name" => "",
+        "sex" => ""
     ];
 
     /**

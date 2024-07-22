@@ -54,6 +54,28 @@ class Config
     }
 
     /**
+     * Initializes the configuration settings from custom environment Relative path (used for running timerjob outside document root).
+     */
+    public static function initFromFile($envRelativePath = "")
+    {
+        if ($envRelativePath == "")
+            self::init();
+        else {
+            $envAbsolutePath = $envRelativePath . "/config/env/env.php";
+            $envPath = realpath($envAbsolutePath);
+            if (file_exists($envPath)) {
+                require_once($envPath);
+                require_once($envRelativePath . "/config/env/global.env.php");
+                self::$configs = $config;
+                return self::$configs;
+            } else {
+                echo "error envRelativePath: $envRelativePath";
+                exit();
+            }
+        }
+    }
+
+    /**
      * Retrieves the value of a configuration attribute.
      *
      * @param string $configKey The key of the configuration attribute.
