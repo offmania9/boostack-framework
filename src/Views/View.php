@@ -233,9 +233,11 @@ abstract class View
      * @return string
      * @throws \Exception
      */
-    public static function getTemplate(string $template, ?array $parameters = null): string
+    public static function getTemplate(string $template, ?array $parameters = null, $templateCustomRootPath = null): string
     {
-        $file = $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get('template_path') . $template;
+
+        $file = ($templateCustomRootPath) ?? $_SERVER['DOCUMENT_ROOT'];
+        $file .= "/" . Config::get('template_path') . $template;
         if (!file_exists($file)) {
             throw new \Exception("Template file ($file) not found");
         }
@@ -257,9 +259,10 @@ abstract class View
      * @return string
      * @throws \Exception
      */
-    public static function getMailTemplate(string $mail, ?array $parameters = null): string
+    public static function getMailTemplate(string $mail, ?array $parameters = null, $templateCustomRootPath = null): string
     {
-        $file = $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get('mail_template_path') . $mail;
+        $file = ($templateCustomRootPath) ?? $_SERVER['DOCUMENT_ROOT'];
+        $file .= "/" . Config::get('mail_template_path') . $mail;
         if (!file_exists($file)) {
             throw new \Exception("Mail templating file ($file) not found");
         }
