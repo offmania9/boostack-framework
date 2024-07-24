@@ -1,9 +1,12 @@
 <?php
+
 namespace Boostack\Models;
+
 use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
+
 /**
  * Boostack: BaseList.Class.php
  * ========================================================================
@@ -135,55 +138,60 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             $sqlCount = "SELECT count(id) FROM " . $this->baseClassTablename . " ";
             $sqlMaster = "SELECT * FROM " . $this->baseClassTablename . " ";
 
-            $sql .= "WHERE" . " ";
+            $sql .= "WHERE ";
             $separator = " AND ";
             $count = 0;
             if (count($fields) > 0) {
                 foreach ($fields as $option) {
                     if ($count > 0) $sql .= $separator;
-                    if ($option[0] == "datetime") {
-                        $sql .= $option[0] . " ";
-                    } else
-                        $sql .= $option[0] . " ";
                     $option[1] = strtoupper($option[1]);
                     switch ($option[1]) {
                         case '<>':
                         case '&LT;&GT;': {
-                                $sql .= "!= '" . $option[2] . "'";
+                                if ($option[2] === null) {
+                                    $sql .= $option[0] . " IS NOT NULL";
+                                } else {
+                                    $sql .= $option[0] . " != '" . $option[2] . "'";
+                                }
                                 break;
                             }
                         case 'LIKE': {
-                                $sql .= $option[1] . " '%" . $option[2] . "%'";
+                                $sql .= $option[0] . " " . $option[1] . " '%" . $option[2] . "%'";
                                 break;
                             }
                         case '=': {
-                                $sql .= $option[1] . " '" . $option[2] . "'";
+                                if ($option[2] === null) {
+                                    $sql .= $option[0] . " IS NULL";
+                                } else {
+                                    $sql .= $option[0] . " = '" . $option[2] . "'";
+                                }
                                 break;
                             }
                         case '<':
                         case '&LT;': {
-                                $sql .= "< '" . $option[2] . "'";
+                                $sql .= $option[0] . " < '" . $option[2] . "'";
                                 break;
                             }
                         case '<=':
                         case '&LT;=': {
-                                $sql .= "<= '" . $option[2] . "'";
+                                $sql .= $option[0] . " <= '" . $option[2] . "'";
                                 break;
                             }
                         case '>':
                         case '&GT;': {
-                                $sql .= "> '" . $option[2] . "'";
+                                $sql .= $option[0] . " > '" . $option[2] . "'";
                                 break;
                             }
                         case '>=':
                         case '&GT;=': {
-                                $sql .= ">= '" . $option[2] . "'";
+                                $sql .= $option[0] . " >= '" . $option[2] . "'";
                                 break;
                             }
                     }
                     $count++;
                 }
             }
+
             $q = $this->PDO->prepare($sqlCount . $sql);
             $q->execute();
             $result = $q->fetch();
@@ -194,20 +202,22 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             if ($currentPage > $maxPage) {
                 $maxPage = floor($queryNumberResult / 25) + 1;
                 $currentPage = 1;
-            };
+            }
 
             if ($orderColumn != "") {
-                $sql .= " ORDER BY" . " " . $orderColumn;
-                if ($orderType != "")
+                $sql .= " ORDER BY " . $orderColumn;
+                if ($orderType != "") {
                     $sql .= " " . $orderType;
+                }
             }
             if ($numitem != NULL) {
-                if ($currentPage == 1)
+                if ($currentPage == 1) {
                     $lowerBound = ($currentPage - 1);
-                else
+                } else {
                     $lowerBound = ($currentPage - 1) * $numitem;
+                }
                 $upperBound = $numitem;
-                $sql .= " LIMIT" . " " . $lowerBound . "," . $upperBound;
+                $sql .= " LIMIT " . $lowerBound . "," . $upperBound;
             }
             $q = $this->PDO->prepare($sqlMaster . $sql);
 
@@ -219,9 +229,10 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             return $queryNumberResult;
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database Exception. Please see log file.");
         }
     }
+
 
     /**
      * Checks if a key exists in the items array.

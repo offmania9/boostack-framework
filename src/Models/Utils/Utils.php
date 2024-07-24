@@ -1,5 +1,7 @@
 <?php
+
 namespace Boostack\Models\Utils;
+
 /**
  * Boostack: Utils.Class.php
  * ========================================================================
@@ -181,10 +183,10 @@ class Utils
      * @param int $datetime_timestamp The UNIX timestamp of the datetime.
      * @return string The elapsed time string.
      */
-    public static function getElapsedTime($datetime_timestamp)
+    public static function getElapsedTime($datetime_timestamp, $datenowFromDB = true)
     {
-        $et = getDateTimeTimestamp(getDateTime()) - $datetime_timestamp;
-        $len = strlen("" . $et);
+        $now = $datenowFromDB ? getDateTimeTimestamp(getDateTime()) : time();
+        $et =  $now - $datetime_timestamp;
         if ($et <= 60) {
             $res = "$et seconds ago";
         } elseif ($et <= 3600) {
