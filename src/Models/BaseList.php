@@ -266,7 +266,7 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      */
     public function get($key)
     {
-        return $this->items[$key];
+        return $this->items[$key] ?? null;
     }
 
     /**
