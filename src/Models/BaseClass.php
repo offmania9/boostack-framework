@@ -355,6 +355,7 @@ abstract class BaseClass implements \JsonSerializable
     {
         $objVars = get_object_vars($this);
         $objVarsExported = array();
+        $objVarsExported["id"] = $objVars["id"];
         foreach ($objVars as $key => $value) {
             if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
             $objVarsExported[$key] = $value;

@@ -1,7 +1,9 @@
 <?php
+
 namespace Boostack\Models\Curl;
+
 /**
- * Boostack: CurlRequest.Class.php
+ * Boostack: CurlRequest.php
  * ========================================================================
  * Copyright 2014-2024 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
@@ -11,20 +13,33 @@ namespace Boostack\Models\Curl;
  */
 
 /**
+ * Enum for HTTP Methods.
+ */
+enum HttpMethod: string
+{
+    case GET = 'GET';
+    case POST = 'POST';
+    case PUT = 'PUT';
+    case PATCH = 'PATCH';
+    case DELETE = 'DELETE';
+    case HEAD = 'HEAD';
+    case OPTIONS = 'OPTIONS';
+}
+
+/**
  * CurlRequest class for making cURL requests.
  */
 class CurlRequest
 {
-
     /**
      * @var string The URL endpoint for the cURL request.
      */
     private $endpoint = "";
 
     /**
-     * @var bool Indicates whether the request is a POST request.
+     * @var HttpMethod The HTTP method for the cURL request.
      */
-    private $is_post = true;
+    private $http_method = HttpMethod::GET;
 
     /**
      * @var bool Indicates whether to return the transfer as a string.
@@ -59,9 +74,7 @@ class CurlRequest
     /**
      * Constructor for CurlRequest class.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Adds a custom header to the cURL request.
@@ -84,13 +97,13 @@ class CurlRequest
     }
 
     /**
-     * Sets whether the request is a POST request.
+     * Sets the HTTP method for the cURL request.
      *
-     * @param bool $isPost A boolean indicating whether the request is a POST request.
+     * @param HttpMethod $method The HTTP method to be set.
      */
-    public function setIsPost(bool $isPost)
+    public function setHttpMethod(HttpMethod $method)
     {
-        $this->is_post = $isPost;
+        $this->http_method = $method;
     }
 
     /**
@@ -109,12 +122,13 @@ class CurlRequest
         }
     }
 
-      /**
+    /**
      * Sets the User-Agent header value.
      *
      * @param string $userAgent The User-Agent header value to be set.
      */
-    public function setUserAgent(string $userAgent) {
+    public function setUserAgent(string $userAgent)
+    {
         $this->userAgent = $userAgent;
     }
 
@@ -136,6 +150,17 @@ class CurlRequest
     public function setGetFields($fields)
     {
         $this->getFields = $fields;
+    }
+
+    /**
+     * Sets whether the request is a POST request.
+     *
+     * @param bool $isPost A boolean indicating whether the request is a POST request.
+     */
+    public function setIsPost(bool $isPost)
+    {
+        if ($isPost)
+            $this->http_method = HttpMethod::POST;
     }
 
     /**
@@ -179,41 +204,58 @@ class CurlRequest
      *
      * @return MessageBag The response from the cURL request.
      */
-
-     public function send() {
+    public function send()
+    {
         $response = new \Boostack\Models\MessageBag();
 
         $endpoint = $this->endpoint;
-        if(!empty($this->getFields)) {
-            $endpoint = $this->endpoint."?".http_build_query($this->getFields);
+        if (!empty($this->getFields)) {
+            $endpoint = $this->endpoint . "?" . http_build_query($this->getFields);
         }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $endpoint);
-        curl_setopt($ch, CURLOPT_ENCODING , $this->encoding);
-        if($this->is_post) {
-            curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_ENCODING, $this->encoding);
+
+        switch ($this->http_method) {
+            case HttpMethod::POST:
+                curl_setopt($ch, CURLOPT_POST, 1);
+                if (!empty($this->postFields)) {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postFields);
+                }
+                break;
+            case HttpMethod::PUT:
+            case HttpMethod::PATCH:
+            case HttpMethod::DELETE:
+            case HttpMethod::OPTIONS:
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $this->http_method->value);
+                if (!empty($this->postFields)) {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postFields);
+                }
+                break;
+            case HttpMethod::HEAD:
+                curl_setopt($ch, CURLOPT_NOBODY, 1);
+                break;
+            case HttpMethod::GET:
+            default:
+                // GET is default, no specific option needed
+                break;
         }
 
-        if(!empty($this->postFields)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postFields);
-        }
-
-        if(!empty($this->customHeader)) {
+        if (!empty($this->customHeader)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $this->customHeader);
         }
 
-        if(!empty($this->userAgent)) {
+        if (!empty($this->userAgent)) {
             curl_setopt($ch, CURLOPT_USERAGENT, $this->userAgent);
         }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, $this->return_transfer);
-
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
         $curlResult = curl_exec($ch);
-        if($curlResult === false) {
+        if ($curlResult === false) {
             $response->error = true;
             $response->data = curl_error($ch);
         } else {
@@ -223,5 +265,4 @@ class CurlRequest
         curl_close($ch);
         return $response;
     }
-
 }
