@@ -6,6 +6,15 @@ use Boostack\Models\BaseList;
 use Boostack\Models\Events\NotificationWeb;
 use Boostack\Models\Session\Session;
 
+/**
+ * Boostack: NotificationWebList.php
+ * ========================================================================
+ * Copyright 2014-2024 Spagnolo Stefano
+ * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
+ * ========================================================================
+ * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
+ * @version 6.0
+ */
 class NotificationWebList extends BaseList
 {
     const BASE_CLASS = NotificationWeb::class;

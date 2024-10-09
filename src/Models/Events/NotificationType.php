@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\Events;
 /**
- * Boostack: NotificationType.Class.php
+ * Boostack: NotificationType.php
  * ========================================================================
  * Copyright 2014-2024 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

@@ -5,6 +5,15 @@ namespace Boostack\Models\Events;
 use Boostack\Models\BaseClassTraced;
 use Boostack\Models\User\User;
 
+/**
+ * Boostack: NotificationWeb.php
+ * ========================================================================
+ * Copyright 2014-2024 Spagnolo Stefano
+ * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
+ * ========================================================================
+ * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
+ * @version 6.0
+ */
 class NotificationWeb extends BaseClassTraced
 {
     protected $id_notification;
@@ -32,7 +41,7 @@ class NotificationWeb extends BaseClassTraced
             $this->notification_obj = new Notification($this->id_notification);
     }
 
-     /**
+    /**
      * Get the user who sent the notification.
      *
      * This method retrieves the user from whom the notification originated

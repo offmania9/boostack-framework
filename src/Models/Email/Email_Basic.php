@@ -1,13 +1,15 @@
 <?php
+
 namespace Boostack\Models\Email;
+
 /**
- * Boostack: Email_Basic.Class.php
+ * Boostack: Email_Basic.php
  * ========================================================================
- * Copyright 2015-2016  Spagnolo Stefano
+ * Copyright 2014-2024 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 4
+ * @version 6.0
  */
 
 /**
@@ -151,6 +153,30 @@ class Email_Basic
             "Content-Transfer-Encoding: base64\n\n" .
             chunk_split(base64_encode($data)) . "\n\n";
     }
+
+    /**
+     * Add an attachment to the email from a buffer.
+     *
+     * This method appends a new attachment to the email message using the provided
+     * buffer data. It constructs the appropriate MIME headers for the attachment
+     * and encodes the data in base64 format.
+     *
+     * @param string $buffer_data The binary data of the attachment.
+     * @param string $name The name of the file being attached.
+     * @param string $type The MIME type of the attachment (e.g., 'image/jpeg').
+     * @return void
+     */
+    public function addAttachmentFromBuffer($buffer_data, $name, $type)
+    {
+        $this->message .= "--" . $this->mime_boundary . "\n" .
+            "Content-Type: " . $type . ";\n" .
+            " name=\"" . $name . "\"\n" .
+            "Content-Disposition: attachment;\n" .
+            " filename=\"" . $name . "\"\n" .
+            "Content-Transfer-Encoding: base64\n\n" .
+            chunk_split(base64_encode($buffer_data)) . "\n\n";
+    }
+
 
     /**
      * Sends the email.
