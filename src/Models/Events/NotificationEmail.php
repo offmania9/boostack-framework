@@ -10,6 +10,7 @@ class NotificationEmail extends BaseClassTraced
     protected $id_user_to;
     protected $email_to;
     protected $status;
+    protected $json_object;
     protected $email_content;
     protected $retries;
     protected $max_retries;
@@ -20,6 +21,7 @@ class NotificationEmail extends BaseClassTraced
         "id_user_to" => 0,
         "email_to" => '',
         "status" => 'pending',
+        "json_object" => NULL,
         "email_content" => '',
         "retries" => 0,
         "max_retries" => NULL,

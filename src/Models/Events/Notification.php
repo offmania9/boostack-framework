@@ -16,6 +16,7 @@ class Notification extends BaseClassTraced
 
     protected $message_content;
     protected $email_content;
+    protected $json_object;
 
     protected $default_values = [
         "id_event" => 0,
@@ -25,13 +26,25 @@ class Notification extends BaseClassTraced
     ];
 
     const TABLENAME = "boostack_notification";
+    
     public function __construct($id = NULL)
     {
         $this->custom_excluded = array("message_content", "email_content");
         parent::init($id);
     }
 
-    public function enqueue(array $to_user_ids)
+    /**
+     * Enqueue a notification for the specified users.
+     *
+     * This method saves the notification and enqueues it for web or email delivery
+     * based on the type specified. It handles both types of notifications by creating
+     * individual entries for each user in the respective notification tables.
+     *
+     * @param array $to_user_ids An array of user IDs to send the notification to.
+     * @return Notification The current instance of the Notification.
+     * @throws Exception If the user IDs array is empty or if message/email content is missing.
+     */
+    public function enqueue(array $to_user_ids) : Notification
     {
         if (count($to_user_ids) > 0) {
             $this->save();
@@ -79,15 +92,39 @@ class Notification extends BaseClassTraced
     //         NotificationEmailSender::trigger();
     // }
 
-    public function setMessageContent($message_content)
+    /**
+     * Set the content for web notifications.
+     *
+     * @param string $message_content The content message for the notification.
+     * @return Notification The current instance of the Notification.
+     */
+    public function setMessageContent($message_content) : Notification
     {
         $this->message_content = $message_content;
         return $this;
     }
 
-    public function setEmailContent($email_content)
+    /**
+     * Set the content for email notifications.
+     *
+     * @param string $email_content The content for the email notification.
+     * @return Notification The current instance of the Notification.
+     */
+    public function setEmailContent($email_content) : Notification
     {
         $this->email_content = $email_content;
+        return $this;
+    }
+
+    /**
+     * Set additional JSON data for the notification.
+     *
+     * @param mixed $json_object A JSON object or array for additional data.
+     * @return Notification The current instance of the Notification.
+     */
+    public function setJsonObject($json_object) : Notification
+    {
+        $this->json_object = $json_object;
         return $this;
     }
 }

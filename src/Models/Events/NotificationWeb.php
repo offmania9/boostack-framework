@@ -10,6 +10,7 @@ class NotificationWeb extends BaseClassTraced
     protected $id_notification;
     protected $id_user_to;
     protected $status;
+    protected $json_object;
     protected $message_content;
 
     protected $notification_obj;
@@ -18,7 +19,8 @@ class NotificationWeb extends BaseClassTraced
         "id_notification" => 0,
         "id_user_to" => 0,
         "status" => 'pending',
-        "message_content" => NULL,
+        "json_object" => NULL,
+        "message_content" => NULL
     ];
 
     const TABLENAME = "boostack_notification_web";
@@ -30,6 +32,14 @@ class NotificationWeb extends BaseClassTraced
             $this->notification_obj = new Notification($this->id_notification);
     }
 
+     /**
+     * Get the user who sent the notification.
+     *
+     * This method retrieves the user from whom the notification originated
+     * by creating a new Notification object using the current notification's ID.
+     *
+     * @return User The user who sent the notification.
+     */
     public function getUserFrom()
     {
         $parent = new Notification($this->id_notification);
