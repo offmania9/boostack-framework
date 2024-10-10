@@ -2,6 +2,8 @@
 
 namespace Boostack\Models\Email;
 
+use function PHPSTORM_META\type;
+
 /**
  * Boostack: Email_Basic.php
  * ========================================================================
@@ -109,12 +111,11 @@ class Email_Basic
 
         $this->headers = "From: " . $this->from_mail;
         $this->headers .= "\nMIME-Version: 1.0\n" .
-            "Content-Type: multipart/mixed;\n" .
-            " boundary=\"" . $this->mime_boundary . "\"";
+            "Content-Type: multipart/mixed; boundary=\"" . $this->mime_boundary . "\"";
 
         $this->message = "This is a multi-part alert in MIME format.\n\n" .
             "--" . $this->mime_boundary . "\n" .
-            "Content-Type:text/html; charset=\"iso-8859-1\"\n" .
+            "Content-Type:text/html; charset=\"UTF-8\"\n" . //iso-8859-1
             "Content-Transfer-Encoding: 7bit\n\n" .
             $this->message_clean . "\n\n";
     }
@@ -135,7 +136,7 @@ class Email_Basic
      * @param string $path The path to the attachment file.
      * @param string $type The MIME type of the attachment.
      */
-    public function addAttachment($path, $type)
+    public function addAttachment($path, $mime_type)
     {
         $this->attachment[] = $path;
         $data = "";
@@ -145,13 +146,7 @@ class Email_Basic
         }
         fclose($file);
 
-        $this->message .= "--" . $this->mime_boundary . "\n" .
-            "Content-Type: " . $type . ";\n" .
-            " name=\"" . basename($path) . "\"\n" .
-            "Content-Disposition: attachment;\n" .
-            " filename=\"" . basename($path) . "\"\n" .
-            "Content-Transfer-Encoding: base64\n\n" .
-            chunk_split(base64_encode($data)) . "\n\n";
+        $this->addAttachmentFromBuffer($data, basename($path), $mime_type);
     }
 
     /**
@@ -163,18 +158,18 @@ class Email_Basic
      *
      * @param string $buffer_data The binary data of the attachment.
      * @param string $name The name of the file being attached.
-     * @param string $type The MIME type of the attachment (e.g., 'image/jpeg').
+     * @param string $mime_type The MIME type of the attachment (e.g., 'image/jpeg').
      * @return void
      */
-    public function addAttachmentFromBuffer($buffer_data, $name, $type)
+    public function addAttachmentFromBuffer($buffer_data, $name, $mime_type)
     {
-        $this->message .= "--" . $this->mime_boundary . "\n" .
-            "Content-Type: " . $type . ";\n" .
-            " name=\"" . $name . "\"\n" .
-            "Content-Disposition: attachment;\n" .
-            " filename=\"" . $name . "\"\n" .
-            "Content-Transfer-Encoding: base64\n\n" .
-            chunk_split(base64_encode($buffer_data)) . "\n\n";
+        $encoded_data = chunk_split(base64_encode($buffer_data));
+
+        $this->message .= "--" . $this->mime_boundary . "\r\n" .
+            "Content-Type: " . $mime_type . "; name=\"" . $name . "\"\r\n" .
+            "Content-Disposition: attachment; filename=\"" . $name . "\"\r\n" .
+            "Content-Transfer-Encoding: base64\r\n\r\n" .
+            $encoded_data . "\r\n";
     }
 
 
@@ -186,11 +181,10 @@ class Email_Basic
     public function Send()
     {
         $this->message .= "--" . $this->mime_boundary . "--\n";
-        $this->message = wordwrap($this->message, 70, "\r\n");
+        //$this->message = wordwrap($this->message, 70, "\r\n");
         foreach ($this->to_list as $value) {
             $ok = mail($value, $this->subject, $this->message, $this->headers);
             if (!$ok) {
-                #throw new \Exception("Can't Send mail to: ".$value); exit("Can't Send mail to: ".$value);
                 return false;
             }
         }
