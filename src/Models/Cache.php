@@ -117,6 +117,49 @@ class Cache
         return true;
     }
 
+     /**
+     * Deletes a single entry from the cache table by key.
+     *
+     * @param string $key The key to delete.
+     * @return bool True if the operation was successful, false otherwise.
+     */
+    public static function delete($key)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $hashedKey = self::hashKey($key);
+        $PDO = Database_PDO::getInstance();
+        $sql = "DELETE FROM " . static::TABLENAME . " WHERE `key` = :key";
+        $stmt = $PDO->prepare($sql);
+        $stmt->bindParam(':key', $hashedKey);
+        try {
+            $stmt->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+            return false;
+        }
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Clears all entries from the cache table.
+     *
+     * @return bool True if the operation was successful, false otherwise.
+     */
+    public static function clearAll()
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $PDO = Database_PDO::getInstance();
+        $sql = "DELETE FROM " . static::TABLENAME;
+        $stmt = $PDO->prepare($sql);
+        try {
+            $stmt->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+            return false;
+        }
+        return $stmt->rowCount() > 0;
+    }
+
     /**
      * Generates a hashed representation of the cache key using the specified algorithm.
      *
