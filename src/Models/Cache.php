@@ -1,13 +1,16 @@
 <?php
+
 namespace Boostack\Models;
+
 use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
+
 /**
  * Boostack: Cache.Class.php
  * ========================================================================
- * Copyright 2014-2024 Spagnolo Stefano
+ * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
@@ -67,13 +70,17 @@ class Cache
     public static function set($key, $value)
     {
         if (!Config::get("cache_enabled")) return false;
+        if (Cache::has($key)) return Cache::update($key, $value);
+        $currentTime = date('Y-m-d H:i:s', time());
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
-        $sql = "INSERT INTO " . static::TABLENAME . " (`key`, `value`, `created_at`) VALUES (:key, :value, :createdat)";
+        $sql = "INSERT INTO " . static::TABLENAME . " (`key`, `key_plain`, `value`, `created_at`, `last_update`) VALUES (:key, :key_plain, :value, :created_at, :last_update)";
         $q = $PDO->prepare($sql);
         $q->bindValue(':key', $hashedKey);
+        $q->bindValue(':key_plain', Request::sanitizeInput($key));
         $q->bindValue(':value', json_encode($value));
-        $q->bindValue(':createdat', time());
+        $q->bindValue(':created_at', $currentTime);
+        $q->bindValue(':last_update', $currentTime);
         try {
             $q->execute();
         } catch (\Exception $e) {
@@ -92,13 +99,15 @@ class Cache
     {
         if (!Config::get("cache_enabled")) return false;
         if (!Cache::has($key)) return Cache::set($key, $value);
+        $currentTime = date('Y-m-d H:i:s', time());
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
-        $sql = "UPDATE " . static::TABLENAME . " SET `value` = :value, `created_at` = :createdat WHERE `key` = :key";
+        $sql = "UPDATE " . static::TABLENAME . " SET `value` = :value, `key_plain` = :key_plain,  `last_update` = :last_update WHERE `key` = :key";
         $q = $PDO->prepare($sql);
         $q->bindValue(':key', $hashedKey);
+        $q->bindValue(':key_plain', Request::sanitizeInput($key));
         $q->bindValue(':value', json_encode($value));
-        $q->bindValue(':createdat', time());
+        $q->bindValue(':last_update', $currentTime);
         try {
             $q->execute();
         } catch (\Exception $e) {

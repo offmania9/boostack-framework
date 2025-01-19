@@ -27,6 +27,6 @@ Launch Docker compose in project root
 The Boostack framework is open-sourced software licensed under the MIT license. (https://github.com/offmania9/Boostack/blob/master/LICENSE)
 
 ## Copyright
-Copyright 2014-2024 Spagnolo Stefano
+Copyright 2014-2025 Spagnolo Stefano
 @author Spagnolo Stefano <s.spagnolo@hotmail.it>
 @version 6.0
