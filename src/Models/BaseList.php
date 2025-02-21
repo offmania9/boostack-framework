@@ -122,7 +122,7 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      * @return int
      * @throws \Exception
      */
-    public function view(array $fields = null, $orderColumn = "", $orderType = "ASC", $numitem = 25, $currentPage = 1): int
+    public function view(array $fields = null, $orderColumn = "", $orderType = "ASC", $numitem = 25, $currentPage = 1, array $joins = []): int
     {
         try {
             $sql = "";
@@ -135,14 +135,24 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             if (!(is_array($fields) && count($fields) > 0)) $error = "Wrong field_view format";
             if ($error !== false) throw new \Exception($error);
 
-            $sqlCount = "SELECT count(id) FROM " . $this->baseClassTablename . " ";
-            $sqlMaster = "SELECT * FROM " . $this->baseClassTablename . " ";
+            $joinClause = "";
+            foreach ($joins as $join) {
+                if (isset($join['table'], $join['on'])) {
+                    $joinClause .= " JOIN " . $join['table'] . " ON " . $join['on'] . " ";
+                }
+            }
+
+            $sqlCount = "SELECT count({$this->baseClassTablename}.id) FROM " . $this->baseClassTablename  . " " . $joinClause;
+            #$sqlMaster = "SELECT * FROM " . $this->baseClassTablename . " " . $joinClause;
+            $columns = $this->getColumnsFullName($this->baseClassTablename);
+            $sqlMaster = "SELECT " . implode(", ", $columns) . " FROM " . $this->baseClassTablename . " " . $joinClause;
 
             $sql .= "WHERE ";
             $separator = " AND ";
             $count = 0;
             if (count($fields) > 0) {
                 foreach ($fields as $option) {
+                    $option[0] = $this->baseClassTablename . "." . $option[0];
                     if ($count > 0) $sql .= $separator;
                     $option[1] = strtoupper($option[1]);
                     switch ($option[1]) {
@@ -191,7 +201,6 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
                     $count++;
                 }
             }
-
             $q = $this->PDO->prepare($sqlCount . $sql);
             $q->execute();
             $result = $q->fetch();
@@ -205,7 +214,7 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             }
 
             if ($orderColumn != "") {
-                $sql .= " ORDER BY " . $orderColumn;
+                $sql .= " ORDER BY " . $this->baseClassTablename . "." . $orderColumn;
                 if ($orderType != "") {
                     $sql .= " " . $orderType;
                 }
@@ -223,7 +232,6 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
 
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
-
             $this->fill($queryResults);
 
             return $queryNumberResult;
@@ -327,6 +335,29 @@ AND column_name NOT IN ('created_at', 'last_update','last_access')";
             $q = $this->PDO->prepare($sql);
             $q->execute();
             return $q->fetchAll(\PDO::FETCH_COLUMN);
+        } catch (\PDOException $PDOEx) {
+            Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
+            throw new \PDOException("Database \Exception. Please see log file.");
+        }
+    }
+
+    /**
+     * Retrieves the columns of the table.
+     * @param bool $withoutTraced
+     * @return mixed
+     * @throws \PDOException
+     */
+    public function getColumnsFullName($withoutTraced = false)
+    {
+        try {
+            $sql = "DESCRIBE " . $this->baseClassTablename;
+            $tableName = $this->baseClassTablename;
+            $q = $this->PDO->prepare($sql);
+            $q->execute();
+            $columns = $q->fetchAll(\PDO::FETCH_COLUMN);
+            return array_map(function ($column) use ($tableName) {
+                return "$tableName.$column";
+            }, $columns);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
             throw new \PDOException("Database \Exception. Please see log file.");
