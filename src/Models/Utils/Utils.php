@@ -62,16 +62,19 @@ class Utils
         return number_format($number, 2, ",", ".");
     }
 
+
     /**
-     * Formats a number with thousands separator.
+     * Formats a number with thousands separator and configurable decimal precision.
      *
      * @param int|float $number The number to be formatted.
+     * @param int $decimals Number of decimal places (default is 0).
      * @return string The formatted number.
      */
-    public static function formatNumber($number)
+    public static function formatNumber($number, $decimals = 0)
     {
-        return number_format($number, 0, ",", ".");
+        return number_format($number, $decimals, ",", ".");
     }
+
 
     /**
      * Removes accents from a string.
