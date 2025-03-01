@@ -268,6 +268,21 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
     }
 
     /**
+     * Purge all items from the items array.
+     * @param $key
+     * @param bool $shift
+     * @return bool
+     */
+    public function purgeAllItems()
+    {
+        if (count($this->items) > 0) {
+            foreach ($this->items as $obj) {
+                $obj->purge();
+            }
+        }
+    }
+
+    /**
      * Retrieves an item from the items array.
      * @param $key
      * @return mixed
