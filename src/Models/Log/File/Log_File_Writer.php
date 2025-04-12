@@ -3,7 +3,7 @@ namespace Boostack\Models\Log\File;
 use Boostack\Models\Config;
 use Boostack\Models\Log\Log_Level;
 /**
- * Boostack: Log_File_Writer.Class.php
+ * Boostack: Log_File_Writer.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

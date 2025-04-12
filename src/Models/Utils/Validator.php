@@ -5,13 +5,13 @@ namespace Boostack\Models\Utils;
 use Boostack\Models\Config;
 
 /**
- * Boostack: Validator.Class.php
+ * Boostack: Validator.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 class Validator
@@ -357,6 +357,17 @@ class Validator
     public static function email($input)
     {
         return is_string($input) && filter_var($input, FILTER_VALIDATE_EMAIL);
+    }
+
+    /**
+     * Validate if the input is a valid url.
+     *
+     * @param mixed $input
+     * @return bool
+     */
+    public static function url($input)
+    {
+        return !empty($input) && is_string($input) && filter_var($input, FILTER_VALIDATE_URL);
     }
 
     /**

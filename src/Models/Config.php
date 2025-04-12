@@ -5,13 +5,13 @@ namespace Boostack\Models;
 use Boostack\Exception\Exception_Misconfiguration;
 
 /**
- * Boostack: Config.Class.php
+ * Boostack: Config.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 class Config
@@ -27,9 +27,7 @@ class Config
     /**
      * Prevents direct instantiation of Config.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     /**
      * Initializes the configuration settings.
@@ -87,11 +85,18 @@ class Config
         if (self::$configs === null) {
             self::$configs = self::init();
         }
-
-        if (isset(self::$configs[$configKey]))
-            return self::$configs[$configKey];
-        throw new Exception_Misconfiguration("Configuration attribute '" . $configKey . "' not found'");
+        $keys = explode('.', $configKey);
+        $value = self::$configs;
+        foreach ($keys as $key) {
+            if (is_array($value) && array_key_exists($key, $value)) {
+                $value = $value[$key];
+            } else {
+                throw new Exception_Misconfiguration("Configuration attribute '" . $configKey . "' not found");
+            }
+        }
+        return $value;
     }
+
 
     /**
      * Checks if a configuration attribute meets a specified constraint.
@@ -103,7 +108,9 @@ class Config
      */
     public static function constraint($configKey, $configvalue = true)
     {
-        if (isset(self::$configs[$configKey]) && self::$configs[$configKey] == $configvalue) return true;
+        $actual = self::get($configKey);
+        if ($actual == $configvalue) return true;
+
         throw new Exception_Misconfiguration("You must enable '" . $configKey . "' configuration attribute in config/env.php file");
     }
 

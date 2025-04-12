@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\Log\Database;
 /**
- * Boostack: Log_Database_Entity.Class.php
+ * Boostack: Log_Database_Entity.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

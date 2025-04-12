@@ -1,6 +1,8 @@
 <?php
 
 namespace Boostack\Models;
+
+use Boostack\Exception\Exception_LoginFailed;
 use Boostack\Models\User\User;
 use Boostack\Models\Session\Session;
 use Boostack\Models\Log\Log_Driver;
@@ -8,15 +10,16 @@ use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
 use Boostack\Models\Utils\Validator;
 use Boostack\Exception\Exception_Registration;
+use Boostack\Models\User\UserPrivilege;
 
 /**
- * Boostack: Auth.Class.php
+ * Boostack: Auth.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
- * @author Alessio Debernardi
- * @version 6.0
+ * @author Stefano Spagnolo
+ * @version 6.2
  */
 
 class Auth
@@ -38,14 +41,9 @@ class Auth
     {
         $result = new MessageBag();
         $isLockStrategyEnabled = Config::get("lockStrategy_on");
-        $lockStrategy = Config::get("login_lockStrategy");
+        $isreCaptchaEnabled = Config::get("reCaptcha_on");
 
         try {
-            // Check for maximum request count
-            if (!Request::checkAcceptedTimeFromLastRequest(self::getLastTry())) {
-                throw new \Exception("Too many requests. Please wait a few seconds");
-            }
-
             // If user is already logged in, return immediately
             if (Auth::isLoggedIn()) {
                 return $result;
@@ -53,37 +51,52 @@ class Auth
 
             // Check lock strategy
             if ($isLockStrategyEnabled) {
-                if (!Session::get("failed_login_count")) Session::set("failed_login_count", 0);
-                if (Session::get("failed_login_count") >= Config::get("login_maxAttempts")) {
-                    if ($lockStrategy == "timer") {
-                        if (!self::checkAcceptedTimeFromLastLogin(self::getLastTry())) throw new \Exception("Too many login requests. Please wait a few seconds", self::LOCK_TIMER);
-                    } else if ($lockStrategy == "recaptcha") {
-                        $recaptchaFormData = Request::hasPostParam("g-recaptcha-response") ? Request::getPostParam("g-recaptcha-response") : null;
-                        if (empty($recaptchaFormData)) throw new \Exception("Missing reCAPTCHA data", self::LOCK_RECAPTCHA);
-                        $recaptchaResponse = self::reCaptchaVerify(Request::getPostParam("g-recaptcha-response"));
-                        if (!$recaptchaResponse) throw new \Exception("Invalid reCAPTCHA", self::LOCK_RECAPTCHA);
-                    }
+                if (Session::get("failed_login_count") > Config::get("login_maxAttempts")) {
+                    if (!self::checkAcceptedTimeFromLastLogin())
+                        throw new Exception_LoginFailed("Too many login requests. Please wait a few seconds", self::LOCK_TIMER);
                     Session::set("failed_login_count", 0);
                 }
             }
 
-            // Validate username and password format
-            if (!Validator::username($username)) throw new \Exception("Invalid username format");
-            if (!Validator::password($password)) throw new \Exception("Invalid password format");
+            // Check reCaptcha
+            if ($isreCaptchaEnabled) {
+                $recaptchaFormData = Request::hasPostParam("g-recaptcha-response") ? Request::getPostParam("g-recaptcha-response") : null;
+                if (empty($recaptchaFormData))
+                    throw new \Exception("Missing reCAPTCHA data", self::LOCK_RECAPTCHA);
+                $recaptchaResponse = self::reCaptchaVerify(Request::getPostParam("g-recaptcha-response"));
+                if (!$recaptchaResponse)
+                    throw new \Exception("Invalid reCAPTCHA", self::LOCK_RECAPTCHA);
+            }
 
             // Update last login attempt
-            Auth::impressLastTry();
+            Auth::setLastTryLogin();
 
-            // Increment failed login attempts count
-            if ($isLockStrategyEnabled || ($isLockStrategyEnabled && Config::get('csrf_on') && Session::CSRFCheckValidity(Request::getPostArray(), false))) Session::set("failed_login_count", Session::get("failed_login_count") + 1);
+            // Validate username and password format
+            if (!Validator::username($username)) throw new Exception_LoginFailed("Invalid username format");
+            if (!Validator::password($password)) throw new Exception_LoginFailed("Invalid password format");
+
+            // Validate CSRF Token
+            if (Config::get('csrf_on') && !Session::CSRFCheckValidity(Request::getPostArray(), false))
+                throw new Exception_LoginFailed("Invalid CSRF Token validity");
 
             // Perform user login
             Auth::checkAndLogin($username, $password, $cookieRememberMe, true);
 
             // Reset failed login attempts count
-            if ($isLockStrategyEnabled) Session::set("failed_login_count", 0);
+            if ($isLockStrategyEnabled)
+                Session::set("failed_login_count", 0);
+        } catch (Exception_LoginFailed $e) {
+            // Increment failed login attempts count
+            if (Config::get("lockStrategy_on")) {
+                $failed_login_count = Session::get("failed_login_count");
+                $failed_login_count = is_numeric($failed_login_count) ? (int)$failed_login_count : 0;
+                Session::set("failed_login_count", $failed_login_count + 1);
+            }
+            Logger::write($e, Log_Level::USER);
+            // Set error message and code in result object
+            $result->error = ($e->getMessage());
+            $result->code = ($e->getCode());
         } catch (\Exception $e) {
-            // Log error
             Logger::write($e, Log_Level::USER);
             // Set error message and code in result object
             $result->error = ($e->getMessage());
@@ -180,28 +193,28 @@ class Auth
      * @return bool True if registration is successful, false otherwise.
      * @throws \Exception If registration fails.
      */
-    public static function registration($username, $email, $psw1, $psw2, $CSRFToken = NULL) : User
+    public static function registration($username, $email, $psw1, $psw2, $CSRFToken = NULL): ?User
     {
         $registrationError = "";
         try {
             // Validate email format
             if (!Validator::email($email)) $registrationError = "Invalid email format";
 
-             // Check if email is already registered
-             if (User::existsByEmail($email, false) || User::existsByUsername($email, false)) $registrationError = "Email already registered";
+            // Check if email is already registered
+            if (User::existsByEmail($email, false) || User::existsByUsername($email, false)) $registrationError = "Email already registered";
 
             // Validate password format
             if (!Validator::password($psw1)) $registrationError = "Invalid password format";
 
             // Validate passwords match
             if ($psw1 !== $psw2) $registrationError = "Passwords must match";
-           
+
             // Validate CSRF token if enabled
             if (Config::get('csrf_on')) {
-                if (empty($CSRFToken)) 
+                if (empty($CSRFToken))
                     throw new \Exception("Attention! CSRF token is required.");
                 $token_key = Session::getObject()->getCSRFDefaultKey();
-                if(Session::CSRFCheckValidity(array($token_key => $CSRFToken))){
+                if (Session::CSRFCheckValidity(array($token_key => $CSRFToken))) {
                     Session::getObject()->CSRFTokenInvalidation();
                 }
             }
@@ -290,18 +303,21 @@ class Auth
      *
      * @return mixed The timestamp of the last login attempt.
      */
-    public static function getLastTry()
+    public static function getLastTryLogin()
     {
         return Session::get("LastTryLogin");
     }
 
     /**
      * Update the timestamp of the last login attempt.
+     *
+     * @return mixed The timestamp of the last login attempt.
      */
-    public static function impressLastTry()
+    public static function setLastTryLogin()
     {
         Session::set("LastTryLogin", time());
     }
+
     /**
      * Get the user object of the logged-in user.
      *
@@ -322,7 +338,7 @@ class Auth
      */
     public static function isTimerLocked()
     {
-        return Config::get("lockStrategy_on") && Config::get("login_lockStrategy") == "timer" && Session::get("failed_login_count") >= Config::get("login_maxAttempts") && !self::checkAcceptedTimeFromLastLogin(self::getLastTry());
+        return Config::get("lockStrategy_on") && Session::get("failed_login_count") >= Config::get("login_maxAttempts") && !self::checkAcceptedTimeFromLastLogin();
     }
 
     /**
@@ -332,7 +348,7 @@ class Auth
      */
     public static function haveToShowCaptcha()
     {
-        return Config::get("lockStrategy_on") && Config::get("login_lockStrategy") == "recaptcha" && Session::get("failed_login_count") >= Config::get("login_maxAttempts");
+        return Config::get("reCaptcha_on") && Session::get("failed_login_count") >= Config::get("login_maxAttempts");
     }
 
     /**
@@ -352,7 +368,7 @@ class Auth
             if (!$userClass::existsByEmail($username)) {
                 Logger::write("Auth -> checkAndLogin: User doesn't exist by Email Address", Log_Level::USER);
                 if ($throwException)
-                    throw new \Exception("Username or password not valid.", 6);
+                    throw new Exception_LoginFailed("Username or password not valid.", 6);
                 return false;
             }
         }
@@ -361,7 +377,7 @@ class Auth
             if (!$userClass::existsByUsername($username)) {
                 Logger::write("Auth -> checkAndLogin: User doesn't exist by Username", Log_Level::USER);
                 if ($throwException)
-                    throw new \Exception("Username or password not valid.", 6);
+                    throw new Exception_LoginFailed("Username or password not valid.", 6);
                 return false;
             }
         }
@@ -370,7 +386,7 @@ class Auth
             if (!$userClass::existsByEmail($username, false) && !$userClass::existsByUsername($username, false)) {
                 Logger::write("Auth -> tryLogin: User doesn't exist by Username and by email", Log_Level::USER);
                 if ($throwException)
-                    throw new \Exception("Username or password not valid.", 6);
+                    throw new Exception_LoginFailed("Username or password not valid.", 6);
                 return false;
             }
         }
@@ -381,7 +397,7 @@ class Auth
         if (!self::isLoggedIn()) {
             Logger::write("Auth -> checkAndLogin: Username or password not valid.", Log_Level::USER);
             if ($throwException)
-                throw new \Exception("Username or password not valid.", 5);
+                throw new Exception_LoginFailed("Username or password not valid.", 5);
             return false;
         }
 
@@ -415,10 +431,12 @@ class Auth
                     $userData = $userClass::getActiveCredentialByUsername($strUsername);
                     break;
             }
-            if ($userData != false) {
+            if ($userData !== false) {
                 $userPwd = $userData["pwd"];
                 $userId = $userData["id"];
-                if ($hashedPassword == "" && password_verify($strPlainPassword, $userPwd) || $hashedPassword != "" && $hashedPassword == $userPwd) {
+                if (($hashedPassword == "" && password_verify($strPlainPassword, $userPwd)) ||
+                    ($hashedPassword !== "" && $hashedPassword == $userPwd)
+                ) {
                     Session::loginUser($userId);
                     $userObject = new $userClass($userId);
                     $userObject->last_access = time();
@@ -443,9 +461,9 @@ class Auth
      */
     private static function reCaptchaVerify($response)
     {
-        $reCaptcha_private = Config::get("reCaptcha_private");
+        $reCaptcha_private = Config::get("reCaptcha_private_serverside_key");
         $curlRequest = new \Boostack\Models\Curl\CurlRequest();
-        $curlRequest->setEndpoint(Config::get("google_recaptcha-endpoint"));
+        $curlRequest->setEndpoint(Config::get("reCaptcha_verify_endpoint"));
         $curlRequest->setIsPost(true);
         $curlRequest->setReturnTransfer(true);
         $curlRequest->setPostFields([
@@ -463,9 +481,12 @@ class Auth
      * @param int $lastLogin The timestamp of the last login attempt.
      * @return bool True if enough time has passed, false otherwise.
      */
-    private static function checkAcceptedTimeFromLastLogin($lastLogin)
+    private static function checkAcceptedTimeFromLastLogin()
     {
-        return $lastLogin != 0 && (time() - $lastLogin > Config::get("login_secondsFormBlocked"));
+        $last_login_timestamp = self::getLastTryLogin();
+        $now = time();
+        $d = $now - $last_login_timestamp;
+        return !empty($last_login_timestamp) && (time() - $last_login_timestamp > Config::get("login_secondsFormBlocked"));
     }
 
     /**
@@ -474,7 +495,7 @@ class Auth
      * @param mixed $currentUser The current user object.
      * @param int $privilegeLevel The privilege level to be checked.
      */
-    public static function checkPrivilege($currentUser, $privilegeLevel)
+    public static function checkPrivilege($currentUser, int $privilegeLevel): bool
     {
         return (!self::hasPrivilege($currentUser, $privilegeLevel));
     }
@@ -486,8 +507,14 @@ class Auth
      * @param int $privilegeLevel The privilege level to be checked.
      * @return bool Returns true if the user has the specified privilege level, false otherwise.
      */
-    public static function hasPrivilege($currentUser, $privilegeLevel)
+    public static function hasPrivilege($currentUser, int $privilegeLevel): bool
     {
+        if (Config::get('session_on') !== TRUE)
+            throw new \Exception("Config 'session_on' must to be TRUE.");
+
+        if (!self::isLoggedIn())
+            throw new \Exception("Current User must to be logged in.");
+
         if ($currentUser == null)
             return false;
 
@@ -495,5 +522,19 @@ class Auth
             return false;
 
         return true;
+    }
+
+    /**
+     * Checks if the currently logged-in user has at least the specified privilege level.
+     *
+     * @param int $privilegeLevel The minimum required privilege level.
+     * @return bool True if the user has the required (or higher) privilege level, false otherwise.
+     */
+    public static function currentUserIs(int $privilegeLevel): bool
+    {
+        if (!UserPrivilege::isValid($privilegeLevel)) {
+            throw new \InvalidArgumentException("Invalid privilege level: $privilegeLevel");
+        }
+        return self::hasPrivilege(self::getUserLoggedObject(), $privilegeLevel);
     }
 }

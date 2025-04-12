@@ -3,7 +3,7 @@
 namespace Boostack\Models;
 
 /**
- * Boostack: Language.Class.php
+ * Boostack: Language.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

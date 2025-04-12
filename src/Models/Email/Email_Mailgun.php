@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\Email;
 /**
- * Boostack: Email_Mailgun.Class.php
+ * Boostack: Email_Mailgun.php
  * ========================================================================
  * Copyright 2015-2016  Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

@@ -8,7 +8,7 @@ use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
 
 /**
- * Boostack: BaseList.Class.php
+ * Boostack: BaseList.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

@@ -1,0 +1,7 @@
+.idea
+.project
+.settings
+.DS_Store
+/composer.lock
+/vendor/*
+!/vendor/.htaccess

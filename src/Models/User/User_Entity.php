@@ -1,14 +1,18 @@
 <?php
+
 namespace Boostack\Models\User;
+
+use Boostack\Exception\Exception_LoginFailed;
 use Boostack\Models\Database\Database_PDO;
+
 /**
- * Boostack: User_Entity.Class.php
+ * Boostack: User_Entity.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 class User_Entity extends \Boostack\Models\BaseClass
 {
@@ -132,7 +136,7 @@ class User_Entity extends \Boostack\Models\BaseClass
         $q2 = $q->fetch();
         if ($q->rowCount() == 0) {
             if ($throwException) {
-                throw new \Exception("Attention! User or Email not found.", 0);
+                throw new Exception_LoginFailed("Attention! User or Email not found.", 0);
             }
             return false;
         }
@@ -174,7 +178,7 @@ class User_Entity extends \Boostack\Models\BaseClass
         $q->execute();
         if ($q->rowCount() == 0) {
             if ($throwException) {
-                throw new \Exception("User exists by email or Username or password not valid.", 3);
+                throw new Exception_LoginFailed("User doesn't exists by email.", 3);
             }
             return false;
         }
@@ -198,7 +202,7 @@ class User_Entity extends \Boostack\Models\BaseClass
         $q->execute();
         if ($q->rowCount() == 0) {
             if ($throwException) {
-                throw new \Exception("Attention! Username or Email not found.", 1);
+                throw new Exception_LoginFailed("Attention! Username or Email not found.", 1);
             }
             return false;
         }

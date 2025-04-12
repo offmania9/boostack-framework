@@ -1,16 +1,17 @@
 <?php
 
 namespace Boostack\Models\Session;
+
 use Boostack\Models\Config;
 
 /**
- * Boostack: Session.Class.php
+ * Boostack: Session.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 class Session
@@ -20,9 +21,7 @@ class Session
     /**
      * Prevents direct instantiation of Session.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     public static function init()
     {
@@ -73,8 +72,16 @@ class Session
      */
     public static function getUserObject()
     {
-        
+
         return self::$objSession->GetUserObject();
+    }
+
+    /**
+     * Method to get session impression time.
+     */
+    public static function getLastImpression()
+    {
+        return self::$objSession->getLastImpression();
     }
 
     /**
@@ -84,7 +91,7 @@ class Session
      */
     public static function getUserID()
     {
-        
+
         return self::$objSession->GetUserID();
     }
 
@@ -96,7 +103,7 @@ class Session
      */
     public static function loginUser($userID)
     {
-        
+
         return self::$objSession->loginUser($userID);
     }
 
@@ -107,7 +114,7 @@ class Session
      */
     public static function logoutUser()
     {
-        
+
         return self::$objSession->logoutUser();
     }
 
@@ -118,7 +125,7 @@ class Session
      */
     public static function isLoggedIn(): bool
     {
-        
+
         return self::$objSession->IsLoggedIn();
     }
 
@@ -131,7 +138,7 @@ class Session
      */
     public static function CSRFCheckValidity(array $postArray, bool $throwException = true)
     {
-        
+
         return self::$objSession->CSRFCheckValidity($postArray, $throwException);
     }
 
@@ -142,7 +149,6 @@ class Session
      */
     public static function CSRFRenderHiddenField()
     {
-        
         return self::$objSession->CSRFRenderHiddenField();
     }
 }

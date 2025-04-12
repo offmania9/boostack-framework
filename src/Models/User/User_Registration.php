@@ -2,7 +2,7 @@
 namespace Boostack\Models\User;
 use Boostack\Models\Database\Database_PDO;
 /**
- * Boostack: User_Registration.Class.php
+ * Boostack: User_Registration.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

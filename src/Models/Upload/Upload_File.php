@@ -6,7 +6,7 @@ use Boostack\Models\Config;
 use Boostack\Models\Utils\Validator;
 
 /**
- * Boostack: Upload_File.Class.php
+ * Boostack: Upload_File.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

@@ -4,7 +4,7 @@ use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
 /**
- * Boostack: Rest_ApiRequestList.Class.php
+ * Boostack: Rest_ApiRequestList.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

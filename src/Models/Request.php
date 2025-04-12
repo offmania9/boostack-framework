@@ -5,13 +5,13 @@ namespace Boostack\Models;
 use Boostack\Models\Session\Session;
 
 /**
- * Boostack: Request.Class.php
+ * Boostack: Request.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 /**
@@ -45,20 +45,47 @@ class Request
      */
     private static function has(string $type, $param): bool
     {
-        return isset(self::${$type}[$param]);
+        $params = self::${$type};
+
+        if (strpos($param, '[') === false) {
+            return isset($params[$param]);
+        }
+
+        $keys = explode('][', rtrim(ltrim($param, '['), ']'));
+        $current = $params;
+        foreach ($keys as $key) {
+            if (!is_array($current) || !isset($current[$key])) {
+                return false;
+            }
+            $current = $current[$key];
+        }
+        return true;
     }
 
     /**
      * Retrieves a parameter from a specific request type.
      *
      * @param string $type The request type (e.g., 'POST', 'QUERY', 'SERVER', 'HEADERS', 'COOKIE', 'REQUEST', 'FILES').
-     * @param mixed $param The parameter to retrieve.
-     * @return mixed
+     * @param mixed $param The parameter to retrieve. Can be a simple string or an array-like string '[foo][bar]'.
+     * @return mixed|null The value if found, null otherwise.
      */
     private static function get(string $type, $param)
     {
-        return isset(self::${$type}[$param]) && self::${$type}[$param] !== null ? self::${$type}[$param] : null;
+        $params = self::${$type};
+        if (is_string($param) && strpos($param, '[') === false) {
+            return isset($params[$param]) ? $params[$param] : null;
+        }
+        $keys = explode('][', rtrim(ltrim($param, '['), ']'));
+        $current = $params;
+        foreach ($keys as $key) {
+            if (!is_array($current) || !array_key_exists($key, $current)) {
+                return null;
+            }
+            $current = $current[$key];
+        }
+        return $current;
     }
+
 
     /**
      * Registers request data from global variables.
@@ -450,12 +477,11 @@ class Request
      * @param int|string $timeLastRequest The time of the last request.
      * @return bool Returns true if the time since the last request is within the accepted time limit, false otherwise.
      */
-    public static function checkAcceptedTimeFromLastRequest($timeLastRequest)
+    public static function checkAcceptedTimeFromLastRequest()
     {
-        if (!is_numeric($timeLastRequest))
-            return true;
+        $timeLastRequest = Session::getLastImpression();
         $secondsAccepted = Config::get("seconds_accepted_between_requests");
-        if ((!empty($timeLastRequest) || $timeLastRequest !== null) && (time() - $timeLastRequest >= $secondsAccepted))
+        if ((!empty($timeLastRequest)) && (time() - $timeLastRequest >= $secondsAccepted))
             return true;
         return false;
     }

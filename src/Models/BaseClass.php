@@ -7,13 +7,13 @@ use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
 
 /**
- * Boostack: BaseClass.Class.php
+ * Boostack: BaseClass.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 abstract class BaseClass implements \JsonSerializable
 {
@@ -216,7 +216,7 @@ abstract class BaseClass implements \JsonSerializable
     {
         return $this->hasSoftDelete() ? $this->softDelete() : $this->purge();
     }
-    
+
     /**
      * Soft delete the object from the database (set 'deleted_at' field to current timestamp).
      *

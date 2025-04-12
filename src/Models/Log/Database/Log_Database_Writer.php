@@ -4,7 +4,7 @@ use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Config;
 use Boostack\Models\Request;
 /**
- * Boostack: Log_Database_Writer.Class.php
+ * Boostack: Log_Database_Writer.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

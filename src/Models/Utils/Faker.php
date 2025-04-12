@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\Utils;
 /**
- * Boostack: Faker.Class.php
+ * Boostack: Faker.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

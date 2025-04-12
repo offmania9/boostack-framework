@@ -1,3 +1,7 @@
+## About Boostack-framework
+This repository, **"offmania9/boostack-framework"**, represents the **core module** of the Boostack framework.  
+The repository **"offmania9/boostack"** serves as a usage interface for Boostack-framework and includes many **out-of-the-box features** built on top of this core module.
+
 ## About Boostack
 Boostack is a full stack framework for PHP.
 Improve your development and build your ideas
@@ -9,7 +13,9 @@ Boostack is available open-source under the MIT license.
 
 **Get the latest version via Composer**
 
-`composer create-project offmania9/boostack`
+`composer create-project offmania9/boostack` - out-of-the-box features built on core module
+`composer create-project offmania9/boostack-framework` - core module
+offmania9/boostack require/import automatically offmania9/boostack-framework
 
 Import as vendor: composer require offmania9/boostack
 
@@ -29,4 +35,4 @@ The Boostack framework is open-sourced software licensed under the MIT license. 
 ## Copyright
 Copyright 2014-2025 Spagnolo Stefano
 @author Spagnolo Stefano <s.spagnolo@hotmail.it>
-@version 6.0
+@version 6.2

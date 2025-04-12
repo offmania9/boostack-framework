@@ -10,13 +10,13 @@ use Boostack\Models\Session\Session;
 use Boostack\Models\User\User_Entity;
 
 /**
- * Boostack: User_List.Class.php
+ * Boostack: User_List.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 class UserList extends \Boostack\Models\BaseList
 {
@@ -63,7 +63,7 @@ class UserList extends \Boostack\Models\BaseList
         try {
             $ob = $orderColumn == null ? "" : " ORDER BY " . $orderColumn . " ";
             $ot = $orderType == null ? "" : " " . $orderType . " ";
-            $sql = "SELECT * " . $this->getSQLFromJoinPart() . $ob . $ot;
+            $sql = "SELECT * " . $this->getSQLFromJoinPart() . " WHERE id>1 " . $ob . $ot ;
             $q = $this->PDO->prepare($sql);
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);

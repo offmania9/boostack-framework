@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\User;
 /**
- * Boostack: User_Social.Class.php
+ * Boostack: User_Social.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

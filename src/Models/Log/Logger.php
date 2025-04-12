@@ -8,13 +8,13 @@ use Boostack\Models\Config;
 use Boostack\Models\Auth;
 
 /**
- * Boostack: Logger.Class.php
+ * Boostack: Logger.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Alessio Debernardi
- * @version 6.0
+ * @version 6.2
  */
 
 class Logger
@@ -45,6 +45,19 @@ class Logger
             case Log_Driver::FILE:
                 if (Config::get('log_on')) {
                     Log_File_Writer::getInstance()->log($message, $level);
+                }
+                break;
+            case Log_Driver::BOTH:
+                if (Config::get('log_on')) {
+                    try {
+                        Log_File_Writer::getInstance()->log($message, $level);
+                        Config::constraint("database_on");
+                        $currentUser = Auth::getUserLoggedObject();
+                        Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
+                    } catch (\Exception $e) {
+                        Log_File_Writer::getInstance()->log($e, $level);
+                        Log_File_Writer::getInstance()->log($message, $level);
+                    }
                 }
                 break;
             default:

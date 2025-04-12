@@ -1,7 +1,7 @@
 <?php
 namespace Boostack\Models\Rest;
 /**
- * Boostack: Rest_ApiRequest.Class.php
+ * Boostack: Rest_ApiRequest.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

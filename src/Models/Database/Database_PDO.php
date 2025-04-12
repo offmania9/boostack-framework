@@ -5,7 +5,7 @@ use Boostack\Models\Log\Logger;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Log_Driver;
 /**
- * Boostack: Database_PDO.Class.php
+ * Boostack: Database_PDO.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

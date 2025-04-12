@@ -2,7 +2,7 @@
 namespace Boostack\Exception;
 
 /**
- * Class \Exception_Misconfiguration
+ * Class \Boostack\Exception\Exception_Misconfiguration
  */
 class Exception_Misconfiguration extends \Exception {
 

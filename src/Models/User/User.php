@@ -1,5 +1,7 @@
 <?php
+
 namespace Boostack\Models\User;
+
 use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Driver;
 use Boostack\Models\Log\Log_Level;
@@ -9,14 +11,15 @@ use Boostack\Views\View;
 use Boostack\Models\Config;
 use Boostack\Models\Language;
 use \Firebase\JWT\JWT;
+
 /**
- * Boostack: User.Class.php
+ * Boostack: User.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Alessio Debernardi
- * @version 6.0
+ * @version 6.2
  */
 
 class User implements \JsonSerializable
@@ -30,7 +33,8 @@ class User implements \JsonSerializable
         User_Entity::class => null,
         User_Social::class => null,
         User_Registration::class => null,
-        User_Info::class => null
+        User_Info::class => null,
+        #User_SSO::class => null
     ];
 
     protected $attributes = array();
@@ -67,7 +71,7 @@ class User implements \JsonSerializable
         if (array_key_exists("id", $array)) {
             foreach ($this->objects as $object) {
                 if (is_object($object)) {
-                    $object->id = $array["id"];
+                    $object->id = (int)$array["id"];
                 }
             }
         }
@@ -106,7 +110,7 @@ class User implements \JsonSerializable
                     if ($first) {
                         $object->save($forcedID);
                         $first = false;
-                        $this->id = $object->id;
+                        $this->id = (int)$object->id;
                     } else {
                         $object->save($this->id);
                     }
@@ -118,7 +122,6 @@ class User implements \JsonSerializable
                     }
                 }
             }
-
             $this->PDO->commit();
         } catch (\Exception $e) {
             $this->PDO->rollBack();
@@ -188,15 +191,20 @@ class User implements \JsonSerializable
         if ($property == "id") {
             return $this->id;
         }
+
         if (!isset($this->attributes[$property])) {
             throw new \Exception("Field $property not found");
         }
         $className = $this->attributes[$property];
         $objectInstance = $this->objects[$className];
-        if (!empty($this->id) && empty($objectInstance->id)) {
-            $objectInstance->load($this->id);
+        if (!empty($this->id) && (empty($objectInstance->id) || ($className !== "Boostack\Models\User\User_Entity" && $className !== "Boostack\Models\User\User"))) {
+            if ($objectInstance::exist($this->id)) {
+                $objectInstance->load($this->id);
+            }
         }
-        return $objectInstance->$property;
+        if (!empty($objectInstance->$property))
+            return $objectInstance->$property;
+        return "";
     }
 
     /**
@@ -210,7 +218,8 @@ class User implements \JsonSerializable
             $this->objects[User_Entity::class]->jsonSerialize(),
             $this->objects[User_Info::class]->jsonSerialize(),
             $this->objects[User_Social::class]->jsonSerialize(),
-            $this->objects[User_Registration::class]->jsonSerialize()
+            $this->objects[User_Registration::class]->jsonSerialize(),
+            $this->objects[User_SSO::class]->jsonSerialize()
         );
     }
 
@@ -467,4 +476,19 @@ class User implements \JsonSerializable
         }
     }
 
+    /**
+     * Returns the list of User_SSO objects associated with this user.
+     * Each object represents a Single Sign-On (SSO) method (e.g. Google, Microsoft, etc.)
+     * linked to the current user.
+     *
+     * @return User_SSOList List of SSO methods associated with the user
+     */
+    public function getMySSOs()
+    {
+        $frlist = new User_SSOList();
+        $filter = array();
+        $filter[] = array("user_id", "=", $this->id);
+        $frlist->view($filter, "id", "desc");
+        return $frlist;
+    }
 }

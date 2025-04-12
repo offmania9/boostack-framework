@@ -2,7 +2,7 @@
 namespace Boostack\Models\User;
 use Boostack\Models\Auth;
 /**
- * Boostack: User_ApiJWTTokenList.Class.php
+ * Boostack: User_ApiJWTTokenList.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)

@@ -4,7 +4,7 @@ use Boostack\Models\Request;
 use Boostack\Models\Config;
 use Boostack\Models\User\User;
 /**
- * Boostack: User_ApiJWTToken.Class.php
+ * Boostack: User_ApiJWTToken.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
@@ -13,7 +13,7 @@ use Boostack\Models\User\User;
  * @version 6.0
  */
 
-require ROOTPATH . '../vendor/autoload.php';
+require  __DIR__ . '/../vendor/autoload.php';
 
 use \Firebase\JWT\JWT;
 // use \Firebase\JWT\Expired\Exception;

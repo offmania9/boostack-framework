@@ -8,7 +8,7 @@ use Boostack\Models\MessageBag;
 use Boostack\Models\Auth;
 
 /**
- * Boostack: Rest_Api_Abstract.Class.php
+ * Boostack: Rest_Api_Abstract.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
