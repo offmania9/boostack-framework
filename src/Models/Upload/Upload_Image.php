@@ -1,8 +1,11 @@
 <?php
+
 namespace Boostack\Models\Upload;
+
 use Boostack\Models\Config;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
+
 /**
  * Boostack: Upload_Image.php
  * ========================================================================
@@ -10,7 +13,7 @@ use Boostack\Models\Log\Logger;
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 const IMAGETYPE_EXTENSION = array(
@@ -103,7 +106,8 @@ class Upload_Image
         "image/jpg",
         "image/pjpeg",
         "image/bmp",
-        "image/png"
+        "image/png",
+        "image/webp"
         //"image/heic"
     );
 
@@ -145,14 +149,19 @@ class Upload_Image
                 // }
                 // else{
                 if (move_uploaded_file($file["tmp_name"], $destination_folder . $this->name)) {
-                    chmod($destination_folder . $this->name, 0755);
+                    chmod($destination_folder . $this->name, 0644);
                 } else {
                     throw new \Exception("Can't move uploaded file: " . $this->name);
                 }
                 // }
-                list($width, $height, $type, $attr) = getimagesize($this->path);
-                $this->height = $height;
-                $this->width = $width;
+                $imageInfo = getimagesize($this->path);
+                if ($imageInfo === false) {
+                    throw new \Exception("Invalid Image: " . $this->name);
+                } else {
+                    list($width, $height, $type, $attr) = $imageInfo;
+                    $this->width = $width;
+                    $this->height = $height;
+                }
 
                 if ($resize !== NULL) {
                     if ($this->width >= $this->height) {
@@ -194,7 +203,8 @@ class Upload_Image
             Logger::write("File Name too long. Rename it and repeat upload.", Log_Level::WARNING);
             throw new \Exception("File Name too long. Rename it and repeat upload.");
         }
-        if (in_array($file["type"], $this->image_types)) { // IS IMAGE
+        $mimeType = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $file["tmp_name"]);
+        if (in_array($mimeType, $this->image_types)) { // IS IMAGE
             if ($file["size"] > Config::get("max_upload_image_size")) { // SIZE CHECK
                 Logger::write("File too large.", Log_Level::WARNING);
                 throw new \Exception("File too large.");
@@ -249,25 +259,44 @@ class Upload_Image
      * @param int $height The height to resize the image to.
      * @param mixed|null $filter The filter to use for resizing.
      */
+    /**
+     * Resizes the image to a specified height while maintaining the aspect ratio.
+     *
+     * @param int $height The height to resize the image to.
+     * @param mixed|null $filter The filter to use for resizing.
+     */
     function resizeToHeight($height, $filter = NULL)
     {
+        if ($height <= 0) {
+            throw new \InvalidArgumentException("Height must be greater than 0.");
+        }
         $ratio = $height / $this->height;
-        $width = $this->width * $ratio;
+        $width = (int)($this->width * $ratio);
+        if ($width <= 0) {
+            throw new \InvalidArgumentException("Calculated width must be greater than 0.");
+        }
         $this->resize($width, $height, $filter);
     }
 
     /**
-     * Resizes the image to a specified width.
+     * Resizes the image to a specified width while maintaining the aspect ratio.
      *
      * @param int $width The width to resize the image to.
      * @param mixed|null $filter The filter to use for resizing.
      */
     function resizeToWidth($width, $filter = NULL)
     {
+        if ($width <= 0) {
+            throw new \InvalidArgumentException("Width must be greater than 0.");
+        }
         $ratio = $width / $this->width;
-        $height = $this->height * $ratio;
+        $height = (int)($this->height * $ratio);
+        if ($height <= 0) {
+            throw new \InvalidArgumentException("Calculated height must be greater than 0.");
+        }
         $this->resize($width, $height, $filter);
     }
+
 
     /**
      * Resizes the image to a specified width for preview.
@@ -277,8 +306,14 @@ class Upload_Image
      */
     function previewResizeToWidth($width, $filter)
     {
+        if ($width <= 0) {
+            throw new \InvalidArgumentException("Width must be greater than 0.");
+        }
         $ratio = $width / $this->width;
-        $height = $this->height * $ratio;
+        $height = (int)($this->height * $ratio);
+        if ($height <= 0) {
+            throw new \InvalidArgumentException("Calculated height must be greater than 0.");
+        }
         $this->previewResize($width, $height, $filter);
     }
 
@@ -311,18 +346,22 @@ class Upload_Image
         switch ($this->type) {
             case "image/jpeg":
             case "image/pjpeg":
-                $this->source = imagecreatefromjpeg($this->path);
+                imagejpeg($new_image, $this->path, 100);
                 break;
             case "image/gif":
-                $this->source = imagecreatefromgif($this->path);
+                imagegif($new_image, $this->path);
                 break;
             case "image/bmp":
-                $this->source = imagecreatefromwbmp($this->path);
+                imagewbmp($new_image, $this->path);
                 break;
             case "image/png":
-                $this->source = imagecreatefrompng($this->path);
+                imagepng($new_image, $this->path, $this->PNG_compression);
+                break;
+            case "image/webp":
+                imagewebp($new_image, $this->path, 100);
                 break;
         }
+
 
         // Copy and resample the source image onto the new image resource
         imagecopyresampled($new_image, $this->source, 0, 0, 0, 0, $width, $height, $this->width, $this->height);
@@ -353,10 +392,10 @@ class Upload_Image
                 imagejpeg($new_image, $this->path, 100);
                 break;
             case "image/gif":
-                imagegif($new_image, $this->path, 100);
+                imagegif($new_image, $this->path);
                 break;
             case "image/bmp":
-                imagewbmp($new_image, $this->path, 100);
+                imagewbmp($new_image, $this->path);
                 break;
             case "image/png":
                 imagepng($new_image, $this->path, $this->PNG_compression);
@@ -366,7 +405,6 @@ class Upload_Image
         // Update the path property
         $this->path = $this->path;
     }
-
 
     /**
      * Resizes the image to the specified width and height for preview purposes.
@@ -416,6 +454,9 @@ class Upload_Image
             case "image/png":
                 imagepng($new_image, $this->preview_path, $this->PNG_compression);
                 break;
+            case "image/webp":
+                imagewebp($new_image, $this->path, 100);
+                break;
         }
 
         // Update the preview_path property
@@ -424,35 +465,56 @@ class Upload_Image
 
 
     /**
-     * Creates a thumbnail from the given image source and saves it to the destination.
+     * Creates a thumbnail from the given image source and saves it to the destination folder with the target name.
      *
      * @param string $src The source file location.
-     * @param string $dest The destination file location.
+     * @param string $destFolder The destination folder where the thumbnail will be saved.
+     * @param string $targetName The target name for the thumbnail (without extension).
      * @param int $targetWidth The desired output width.
      * @param int|null $targetHeight The desired output height or null.
-     * @return bool|null True on success, null on failure.
+     * @throws \InvalidArgumentException if the source file doesn't exist or the image type is unsupported.
+     * @throws \RuntimeException if the image cannot be loaded or the thumbnail cannot be saved.
+     * @return array Information about the created thumbnail (path, file name, extension, full path).
      */
-    public static function createThumbnail($src, $dest, $targetWidth, $targetHeight = null)
+    public static function createThumbnail($src, $destFolder, $targetName, $targetWidth, $targetHeight = null)
     {
         // Check if the source file exists
         if (!file_exists($src)) {
-            return null;
+            throw new \InvalidArgumentException("Source file does not exist: $src");
         }
 
         // Get the image type
         $type = exif_imagetype($src);
 
         // Check if a valid image type and handler exist
-        if (!$type || !IMAGE_HANDLERS[$type]) {
-            return null;
+        if (!$type || !isset(IMAGE_HANDLERS[$type])) {
+            throw new \InvalidArgumentException("Unsupported image type: $type");
         }
 
         // Load the image with the appropriate handler
-        $image = call_user_func(IMAGE_HANDLERS[$type]['load'], $src);
+        switch ($type) {
+            case IMAGETYPE_JPEG:
+                $image = \imagecreatefromjpeg($src);
+                break;
+            case IMAGETYPE_GIF:
+                $image = \imagecreatefromgif($src);
+                break;
+            case IMAGETYPE_BMP:
+                $image = \imagecreatefromwbmp($src);
+                break;
+            case IMAGETYPE_PNG:
+                $image = \imagecreatefrompng($src);
+                break;
+            case IMAGETYPE_WEBP:
+                $image = \imagecreatefromwebp($src);
+                break;
+            default:
+                throw new \InvalidArgumentException("Unsupported image type: $type");
+        }
 
         // Check if the image was loaded successfully
         if (!$image) {
-            return null;
+            throw new \RuntimeException("Failed to load image: $src");
         }
 
         // Get the original image dimensions
@@ -483,11 +545,59 @@ class Upload_Image
         }
 
         // Copy and resize the original image to the thumbnail
-        imagecopyresampled($thumbnail, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+        if (!imagecopyresampled($thumbnail, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height)) {
+            throw new \RuntimeException("Failed to resize the image: $src");
+        }
+
+        // Ensure the destination folder exists
+        if (!is_dir($destFolder)) {
+            throw new \RuntimeException("Destination folder does not exist: $destFolder");
+        }
+
+        // Get the file extension based on image type
+        $extension = image_type_to_extension($type, false); // Get extension without the leading dot (e.g., "jpg", "png")
+
+        // Generate the full path for the new thumbnail
+        $filePath = rtrim($destFolder, '/') . '/' . $targetName . '.' . $extension;
 
         // Save the thumbnail to disk
-        return call_user_func(IMAGE_HANDLERS[$type]['save'], $thumbnail, $dest, IMAGE_HANDLERS[$type]['quality']);
+        $saved = false;
+        switch ($type) {
+            case IMAGETYPE_JPEG:
+                $saved = imagejpeg($thumbnail, $filePath, IMAGE_HANDLERS[$type]['quality']);
+                break;
+            case IMAGETYPE_GIF:
+                $saved = imagegif($thumbnail, $filePath);
+                break;
+            case IMAGETYPE_BMP:
+                $saved = imagewbmp($thumbnail, $filePath, IMAGE_HANDLERS[$type]['quality']);
+                break;
+            case IMAGETYPE_PNG:
+                $saved = imagepng($thumbnail, $filePath, IMAGE_HANDLERS[$type]['quality']);
+                break;
+            default:
+                throw new \RuntimeException("Unsupported image type: $type");
+        }
+
+        if (!$saved) {
+            throw new \RuntimeException("Failed to save the thumbnail: $filePath");
+        }
+
+        // Get the file size and MIME type
+        $fileSize = filesize($filePath); // Size in bytes
+        $mimeType = mime_content_type($filePath); // Get the MIME type (e.g., image/jpeg)
+
+        // Return the information about the created thumbnail
+        return [
+            'destFolder' => $destFolder,
+            'fileName' => $targetName . '.' . $extension,
+            'extension' => $extension,
+            'fullPath' => $filePath,
+            'size' => $fileSize,
+            'mimeType' => $mimeType
+        ];
     }
+
 
     /**
      * Copies an image file to a new location and converts it to a different format if necessary.
