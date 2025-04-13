@@ -1,58 +1,58 @@
 <?php
+
 namespace Boostack\Models\User;
+
 /**
- * Boostack: User_Info.php
+ * Boostack: User_Info.Class.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 class User_Info extends \Boostack\Models\BaseClass
 {
-
-    
     protected $first_name;
-    
+
     protected $last_name;
-    
-    protected $locale;
-    
+
+    protected $address;
+
     protected $city;
-    
+
     protected $state;
-    
+
     protected $country;
-    
+
     protected $zip;
-    
+
     protected $about_me;
-    
+
     protected $tel;
-    
+
     protected $cell;
-    
+
     protected $profession;
-    
+
     protected $company;
-    
+
     protected $birthday;
-    
+
     protected $movies;
-    
+
     protected $music;
-    
+
     protected $political;
-    
+
     protected $interests;
-    
+
     protected $tv;
-    
+
     protected $religion;
-    
+
     protected $pic_big;
-    
+
     protected $sex;
 
     /**
@@ -66,7 +66,7 @@ class User_Info extends \Boostack\Models\BaseClass
     protected $default_values = [
         "first_name" => "",
         "last_name" => "",
-        "locale" => "",
+        "address" => "",
         "city" => "",
         "state" => "",
         "country" => "",
@@ -95,7 +95,4 @@ class User_Info extends \Boostack\Models\BaseClass
     {
         parent::init($id);
     }
-
 }
-
-?>
