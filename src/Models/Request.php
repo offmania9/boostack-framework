@@ -115,13 +115,15 @@ class Request
     /**
      * Retrieves a POST parameter value.
      *
-     * @param string $param The parameter name.
+     * @param string $param The parameter name.     
+     * @param mixed $default Default value if parameter is not set.
      * @return mixed|null|string The sanitized parameter value.
      */
-    public static function getPostParam(string $param)
+    public static function getPostParam(string $param, $default = null)
     {
         $rt = RequestType::POST;
-        return self::sanitizeInput(self::get($rt, $param));
+        $value = self::get($rt, $param);
+        return $value !== null ? self::sanitizeInput($value) : $default;
     }
 
     /**
@@ -149,12 +151,14 @@ class Request
      * Retrieves a QUERY parameter value.
      *
      * @param string $param The parameter name.
+     * @param mixed $default Default value if parameter is not set.
      * @return mixed|null|string The sanitized parameter value.
      */
-    public static function getQueryParam(string $param)
+    public static function getQueryParam(string $param, $default = null)
     {
         $rt = RequestType::QUERY;
-        return self::sanitizeInput(self::get($rt, $param));
+        $value = self::get($rt, $param);
+        return $value !== null ? self::sanitizeInput($value) : $default;
     }
 
     /**
