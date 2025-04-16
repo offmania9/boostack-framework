@@ -44,7 +44,6 @@ class Auth
         $isreCaptchaEnabled = Config::get("reCaptcha_on");
 
         try {
-            // If user is already logged in, return immediately
             if (Auth::isLoggedIn()) {
                 return $result;
             }
@@ -68,42 +67,32 @@ class Auth
                     throw new \Exception("Invalid reCAPTCHA", self::LOCK_RECAPTCHA);
             }
 
-            // Update last login attempt
             Auth::setLastTryLogin();
 
-            // Validate username and password format
             if (!Validator::username($username)) throw new Exception_LoginFailed("Invalid username format");
             if (!Validator::password($password)) throw new Exception_LoginFailed("Invalid password format");
 
-            // Validate CSRF Token
             if (Config::get('csrf_on') && !Session::CSRFCheckValidity(Request::getPostArray(), false))
                 throw new Exception_LoginFailed("Invalid CSRF Token validity");
 
-            // Perform user login
             Auth::checkAndLogin($username, $password, $cookieRememberMe, true);
 
-            // Reset failed login attempts count
             if ($isLockStrategyEnabled)
                 Session::set("failed_login_count", 0);
         } catch (Exception_LoginFailed $e) {
-            // Increment failed login attempts count
             if (Config::get("lockStrategy_on")) {
                 $failed_login_count = Session::get("failed_login_count");
                 $failed_login_count = is_numeric($failed_login_count) ? (int)$failed_login_count : 0;
                 Session::set("failed_login_count", $failed_login_count + 1);
             }
             Logger::write($e, Log_Level::USER);
-            // Set error message and code in result object
             $result->error = ($e->getMessage());
             $result->code = ($e->getCode());
         } catch (\Exception $e) {
             Logger::write($e, Log_Level::USER);
-            // Set error message and code in result object
             $result->error = ($e->getMessage());
             $result->code = ($e->getCode());
         }
-
-        // Return result object
         return $result;
     }
 
@@ -115,21 +104,13 @@ class Auth
      */
     public static function loginByUserID($userID)
     {
-        // Determine the user class to use
         $userClass = Config::get("use_custom_user_class") ? Config::get("custom_user_class") : User::class;
-
-        // If the user is not already logged in, proceed with login
         if (!Auth::isLoggedIn()) {
-            // Create an instance of the user class with the given userID
             $user = new $userClass($userID);
 
-            // Perform login with username, empty password, and user's stored password
+            // Perform login 
             self::login($user->username, "", $user->pwd);
-
-            // Update the last access time of the user
             $user->last_access = time();
-
-            // Save the user's updated information
             $user->save();
         }
     }
@@ -144,20 +125,14 @@ class Auth
     public static function loginByCookie($cookieValue)
     {
         try {
-            // Determine the user class to use
             $userClass = Config::get("use_custom_user_class") ? Config::get("custom_user_class") : User::class;
 
-            // Retrieve user credentials from the cookie value
             $userCredentials = $userClass::getCredentialByCookie($cookieValue);
 
-            // If user credentials are found
             if ($userCredentials !== false) {
-                // Check the validity of the cookie hash
                 if (Request::checkCookieHashValidity($cookieValue)) {
-                    // Determine the username to log in based on the configuration
                     $usernameToLogin = Config::get("userToLogin") == "email" ? $userCredentials["email"] : $userCredentials["username"];
 
-                    // Perform login with the retrieved credentials
                     $loginResult = self::login($usernameToLogin, "", $userCredentials["pwd"]);
 
                     // If login is successful, refresh the "remember-me" cookie
@@ -167,15 +142,12 @@ class Auth
                         return true;
                     }
                 } else {
-                    // Log the invalid cookie hash
                     Logger::write("checkCookieHashValidity(" . $cookieValue . "): false - IP:" . Request::getIpAddress(), Log_Level::USER);
                 }
             }
         } catch (\PDOException $e) {
-            // Log database-related errors
             Logger::write($e, Log_Level::ERROR, Log_Driver::FILE);
         } catch (\Exception $e) {
-            // Log other \Exceptions
             Logger::write($e, Log_Level::ERROR);
         }
         return false;
@@ -197,19 +169,14 @@ class Auth
     {
         $registrationError = "";
         try {
-            // Validate email format
             if (!Validator::email($email)) $registrationError = "Invalid email format";
 
-            // Check if email is already registered
             if (User::existsByEmail($email, false) || User::existsByUsername($email, false)) $registrationError = "Email already registered";
 
-            // Validate password format
             if (!Validator::password($psw1)) $registrationError = "Invalid password format";
 
-            // Validate passwords match
             if ($psw1 !== $psw2) $registrationError = "Passwords must match";
 
-            // Validate CSRF token if enabled
             if (Config::get('csrf_on')) {
                 if (empty($CSRFToken))
                     throw new \Exception("Attention! CSRF token is required.");
@@ -219,7 +186,6 @@ class Auth
                 }
             }
 
-            // If no registration errors, proceed with registration
             if (strlen($registrationError) == 0) {
                 $user = new User();
                 $user->username = $username;
@@ -228,28 +194,23 @@ class Auth
                 $user->pwd = $psw1;
                 $user->save();
 
-                // Log in the newly registered user
                 Auth::loginByUserID($user->id);
 
-                // Invalidate CSRF token if enabled
                 if (Config::get('csrf_on')) {
                     Session::getObject()->CSRFTokenInvalidation();
                 }
-                return $user; // Registration successful
+                return $user;
             } else {
-                // Log registration error and throw \Exception
                 Logger::write($registrationError, Log_Level::ERROR);
                 throw new Exception_Registration($registrationError);
             }
         } catch (\PDOException $e) {
-            // Log database-related errors
             Logger::write($e, Log_Level::ERROR, Log_Driver::FILE);
         } catch (\Exception $e) {
-            // Log other \Exceptions and re-throw
             Logger::write($e, Log_Level::ERROR);
             throw $e;
         }
-        return null; // Registration failed
+        return null;
     }
 
     /**
@@ -270,29 +231,22 @@ class Auth
     public static function logout()
     {
         try {
-            // Check if user is logged in before attempting to logout
             if (self::isLoggedIn()) {
-                // Log the logout event
                 Logger::write("[Logout] uid: " . Session::getUserID(), Log_Level::USER);
-
                 // Perform logout by clearing session data
                 Session::logoutUser();
 
-                // If cookies are enabled, delete the authentication cookie
                 if (Config::get("cookie_on")) {
                     $cookieName = Config::get("cookie_name");
                     $cookieExpire = Config::get("cookie_expire");
                     setcookie($cookieName, false, time() - $cookieExpire);
                     setcookie($cookieName, false, time() - $cookieExpire, "/");
                 }
-
-                return true; // Logout successful
+                return true;
             }
         } catch (\PDOException $e) {
-            // Log database-related errors
             Logger::write($e, Log_Level::ERROR, Log_Driver::FILE);
         } catch (\Exception $e) {
-            // Log other \Exceptions
             Logger::write($e, Log_Level::ERROR);
         }
         return false; // Logout failed
@@ -408,6 +362,7 @@ class Auth
         //Logger::write("[Login] uid: ".Session::getUserID(),Log_Level::USER);
         return true;
     }
+
     /**
      * Log in a user with the provided username and password.
      *
@@ -517,15 +472,33 @@ class Auth
 
         if ($currentUser == null)
             return false;
-
-        if ($currentUser->privilege > $privilegeLevel)
+        if ($currentUser->privilege !== $privilegeLevel)
             return false;
 
         return true;
     }
 
     /**
-     * Checks if the currently logged-in user has at least the specified privilege level.
+     * Checks if the current user has at least the specified privilege level.
+     * Lower numeric values mean higher privileges (e.g., 1 = superadmin, 2 = admin, 3 = user).
+     *
+     * @param mixed $currentUser The current user object.
+     * @param int $privilegeLevel The minimum privilege level required.
+     * @return bool Returns true if the user has at least the specified privilege level, false otherwise.
+     */
+    public static function hasAtLeastPrivilege($currentUser, int $privilegeLevel): bool
+    {
+        if (Config::get('session_on') !== TRUE)
+            throw new \Exception("Config 'session_on' must be TRUE.");
+
+        if (!self::isLoggedIn())
+            throw new \Exception("Current User must be logged in.");
+
+        return $currentUser && isset($currentUser->privilege) && $currentUser->privilege <= $privilegeLevel;
+    }
+
+    /**
+     * Checks if the currently logged-in user has the specified privilege level.
      *
      * @param int $privilegeLevel The minimum required privilege level.
      * @return bool True if the user has the required (or higher) privilege level, false otherwise.
@@ -536,5 +509,21 @@ class Auth
             throw new \InvalidArgumentException("Invalid privilege level: $privilegeLevel");
         }
         return self::hasPrivilege(self::getUserLoggedObject(), $privilegeLevel);
+    }
+
+    /**
+     * Checks if the currently logged-in user has at least the specified privilege level.
+     * Lower numeric values mean higher privileges (e.g., 1 = superadmin, 2 = admin, 3 = user).
+     *
+     * @param int $privilegeLevel The minimum required privilege level.
+     * @return bool True if the user has the required or higher privilege level, false otherwise.
+     */
+    public static function currentUserIsAtLeast(int $privilegeLevel): bool
+    {
+        if (!UserPrivilege::isValid($privilegeLevel)) {
+            throw new \InvalidArgumentException("Invalid privilege level: $privilegeLevel");
+        }
+
+        return self::hasAtLeastPrivilege(self::getUserLoggedObject(), $privilegeLevel);
     }
 }
