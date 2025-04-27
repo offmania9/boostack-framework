@@ -17,9 +17,9 @@ use Boostack\Models\Config;
 class Validator
 {
 
-    private $error;
+    private ?bool $error = null;
 
-    private $errorMessages;
+    private ?array $errorMessages = null;
 
     const RULES_SEPARATOR = "|";
 
@@ -46,17 +46,15 @@ class Validator
             $value = trim($value, self::RULES_SEPARATOR);
             $elemRules = explode(self::RULES_SEPARATOR, $value);
 
-            foreach ($elemRules as $rule) {
-                if ($rule == "required") {
-                    if (!$this->$rule($key, $input)) {
-                        $this->setError($key, $rule);
+            foreach ($elemRules as $elemRule) {
+                if ($elemRule === "required") {
+                    if (!$this->{$elemRule}($key, $input)) {
+                        $this->setError($key, $elemRule);
                     }
-                } else {
-                    if (isset($input[$key])) {
-                        $valToValidate = $input[$key];
-                        if (!$this->$rule($valToValidate)) {
-                            $this->setError($key, $rule);
-                        }
+                } elseif (isset($input[$key])) {
+                    $valToValidate = $input[$key];
+                    if (!$this->{$elemRule}($valToValidate)) {
+                        $this->setError($key, $elemRule);
                     }
                 }
             }
@@ -104,8 +102,8 @@ class Validator
         foreach ($rules as $key => $value) {
             $elemRules = explode(self::RULES_SEPARATOR, trim($value, self::RULES_SEPARATOR));
 
-            foreach ($elemRules as $rule) {
-                $fullRule = explode(self::INTRA_RULES_SEPARATOR, $rule);
+            foreach ($elemRules as $elemRule) {
+                $fullRule = explode(self::INTRA_RULES_SEPARATOR, $elemRule);
                 $rule_1 = $fullRule[0];
                 $rule_2 = count($fullRule) > 1 ? $fullRule[1] : null;
 
@@ -116,43 +114,31 @@ class Validator
                         }
                         break;
                     case "string":
-                        if (isset($input[$key]) && count($input[$key]["values"]) > 0) {
-                            if (!$this->string($input[$key]["values"])) {
-                                $this->setError($key, $rule_1);
-                            }
+                        if (isset($input[$key]) && count($input[$key]["values"]) > 0 && !$this->string($input[$key]["values"])) {
+                            $this->setError($key, $rule_1);
                         }
                         break;
                     case "integer":
-                        if (isset($input[$key]) && count($input[$key]["values"]) > 0) {
-                            if (!$this->integer($input[$key]["values"])) {
-                                $this->setError($key, $rule_1);
-                            }
+                        if (isset($input[$key]) && count($input[$key]["values"]) > 0 && !$this->integer($input[$key]["values"])) {
+                            $this->setError($key, $rule_1);
                         }
                         break;
                     case "float":
-                        if (isset($input[$key]) && count($input[$key]["values"]) > 0) {
-                            if (!$this->float($input[$key]["values"])) {
-                                $this->setError($key, $rule_1);
-                            }
+                        if (isset($input[$key]) && count($input[$key]["values"]) > 0 && !$this->float($input[$key]["values"])) {
+                            $this->setError($key, $rule_1);
                         }
                         break;
                     case "min":
-                        if (isset($input[$key])) {
-                            if (empty($rule_2) || count($input[$key]["values"]) < $rule_2) {
-                                $this->setError($key, $rule);
-                            }
+                        if (isset($input[$key]) && ($rule_2 === null || $rule_2 === '' || $rule_2 === '0' || count($input[$key]["values"]) < $rule_2)) {
+                            $this->setError($key, $elemRule);
                         }
                         break;
                     case "max":
-                        if (isset($input[$key])) {
-                            if (empty($rule_2) || count($input[$key]["values"]) > $rule_2) {
-                                $this->setError($key, $rule);
-                            }
+                        if (isset($input[$key]) && ($rule_2 === null || $rule_2 === '' || $rule_2 === '0' || count($input[$key]["values"]) > $rule_2)) {
+                            $this->setError($key, $elemRule);
                         }
                         break;
                     case "in":
-                        // TO-DO
-                        break;
                     default:
                         break;
                 }
@@ -244,9 +230,8 @@ class Validator
      * Validate operators for the view method.
      *
      * @param string $rule
-     * @return bool
      */
-    public static function operators($rule)
+    public static function operators($rule): bool
     {
         $rules = ["like", "not like", "&lt;&gt;", "=", "&lt;", "&lt;=", "&gt;", "&gt;="];
         return in_array($rule, $rules);
@@ -284,12 +269,12 @@ class Validator
         $res = true;
         if (is_array($input)) {
             foreach ($input as $elem) {
-                if (!preg_match('/^[A-Za-z0-9 _]*[A-Za-z0-9_]+$/', $elem) && $res) {
+                if (!preg_match('/^[A-Za-z0-9 _]*\w+$/', $elem) && $res) {
                     $res = false;
                 }
             }
         } else {
-            $res = preg_match('/^[A-Za-z0-9 _]*[A-Za-z0-9_]+$/', $input);
+            $res = preg_match('/^[A-Za-z0-9 _]*\w+$/', $input);
         }
         return $res;
     }
@@ -341,9 +326,8 @@ class Validator
      *
      * @param mixed $elem
      * @param array $array
-     * @return bool
      */
-    public static function in($elem, $array)
+    public static function in($elem, $array): bool
     {
         return in_array($elem, $array);
     }
@@ -352,9 +336,8 @@ class Validator
      * Validate if the input is a valid email address.
      *
      * @param mixed $input
-     * @return bool
      */
-    public static function email($input)
+    public static function email($input): bool
     {
         return is_string($input) && filter_var($input, FILTER_VALIDATE_EMAIL);
     }
@@ -363,9 +346,8 @@ class Validator
      * Validate if the input is a valid url.
      *
      * @param mixed $input
-     * @return bool
      */
-    public static function url($input)
+    public static function url($input): bool
     {
         return !empty($input) && is_string($input) && filter_var($input, FILTER_VALIDATE_URL);
     }
@@ -379,7 +361,7 @@ class Validator
     public static function phone($input)
     {
         // Regular expression pattern for a basic phone number validation
-        $pattern = '/^[0-9]{10}$/'; // Esempio: 1234567890
+        $pattern = '/^\d{10}$/'; // Esempio: 1234567890
 
         // Check if the input matches the pattern
         return preg_match($pattern, $input);
@@ -401,9 +383,8 @@ class Validator
      * Validate password for login purposes.
      *
      * @param string $password
-     * @return bool
      */
-    public static function password_login($password)
+    public static function password_login($password): bool
     {
         return !empty($password) && strlen($password) >= Config::get("password_min_length") && strlen($password) <= Config::get("password_max_length");
     }
@@ -412,9 +393,8 @@ class Validator
      * Validate password.
      *
      * @param string $password
-     * @return bool
      */
-    public static function password($password)
+    public static function password($password): bool
     {
         return !empty($password) && strlen($password) >= Config::get("password_min_length") && strlen($password) <= Config::get("password_max_length");
     }
@@ -427,16 +407,15 @@ class Validator
      */
     public static function strongPassword($password)
     {
-        return preg_match("#.*^(?=.{8,20})(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*\W).*$#", $password);
+        return preg_match("#.*^(?=.{8,20})(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*\$#", $password);
     }
 
     /**
      * Validate username.
      *
      * @param string $username
-     * @return bool
      */
-    public static function username($username)
+    public static function username($username): bool
     {
         return !empty($username) && strlen($username) >= Config::get("username_min_length") && strlen($username) <= Config::get("username_max_length");
     }
@@ -445,9 +424,8 @@ class Validator
      * Validate filename.
      *
      * @param string $filename
-     * @return bool
      */
-    public static function filename($filename)
+    public static function filename($filename): bool
     {
         // TODO: Implement filename validation
         return true;
@@ -458,23 +436,19 @@ class Validator
      *
      * @param mixed $input
      * @param array $array
-     * @return bool
      */
-    public function required($input, $array)
+    public function required($input, $array): bool
     {
         return array_key_exists($input, $array);
     }
 
     /** PRIVATE METHODS */
-
     /**
      * Set error message.
      *
      * @param string $key
-     * @param string $message
-     * @return void
      */
-    private function setError($key, $message)
+    private function setError($key, string $message): void
     {
         $this->error = true;
         $this->errorMessages[$key]["message"][] = $message;
@@ -482,10 +456,8 @@ class Validator
 
     /**
      * Check if there's an error.
-     *
-     * @return mixed
      */
-    private function hasError()
+    private function hasError(): ?bool
     {
         return $this->error;
     }

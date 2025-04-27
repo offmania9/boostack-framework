@@ -35,10 +35,10 @@ class Database_AccessLogger
     private $query;
 
     /** @var \PDO The \PDO object for database connection. */
-    private $PDO;
+    private $pdo;
 
     /** @var Database_AccessLogger|null The singleton instance of Database_AccessLogger. */
-    private static $instance = NULL;
+    private static ?\Boostack\Models\Database\Database_AccessLogger $databaseAccessLogger = NULL;
 
     /** @var string The table name for logging database access. */
     const TABLENAME = "boostack_log";
@@ -50,8 +50,8 @@ class Database_AccessLogger
      */
     private function __construct($objUser = NULL)
     {
-        $this->PDO = Database_PDO::getInstance();
-        $this->username = (!is_null($objUser)) ? $objUser->id : "Anonymous";
+        $this->pdo = Database_PDO::getInstance();
+        $this->username = (is_null($objUser)) ? "Anonymous" : $objUser->id;
         $this->ip = Request::getIpAddress();
         $this->useragent = Request::sanitizeInput(getenv('HTTP_USER_AGENT'));
         $this->referrer = isset($_SERVER["HTTP_REFERER"]) ? Request::sanitizeInput($_SERVER["HTTP_REFERER"]) : "";
@@ -64,7 +64,7 @@ class Database_AccessLogger
      * @param string|null $message The message to be logged.
      * @param string $level The log level.
      */
-    public function log($message = null, $level = "information")
+    public function log($message = null, $level = "information"): void
     {
         $enabledTypes = Config::get("log_enabledTypes");
 
@@ -86,7 +86,7 @@ class Database_AccessLogger
 
         $sql = "INSERT INTO " . self::TABLENAME . "  (id, datetime, level, username, ip, useragent, referrer, query, message)
         VALUES(NULL, :time, :level, :username, :ip, :useragent, :referrer, :query, :message)";
-        $q = $this->PDO->prepare($sql);
+        $q = $this->pdo->prepare($sql);
         $q->bindValue(':time', time());
         $q->bindValue(':level', $level);
         $q->bindValue(':username', $this->username);
@@ -99,23 +99,17 @@ class Database_AccessLogger
     }
 
     /**
-     * Prevents cloning of Database_AccessLogger object.
-     */
-    private function __clone()
-    {
-    }
-
-    /**
      * Gets the singleton instance of Database_AccessLogger.
      *
      * @param object|null $objUser The user object (if available).
      * @return Database_AccessLogger|null The singleton instance.
      */
-    public static function getInstance($objUser = NULL)
+    public static function getInstance($objUser = NULL): \Boostack\Models\Database\Database_AccessLogger
     {
-        if (self::$instance == NULL)
-            self::$instance = new Database_AccessLogger($objUser);
+        if (self::$databaseAccessLogger == NULL) {
+            self::$databaseAccessLogger = new Database_AccessLogger($objUser);
+        }
 
-        return self::$instance;
+        return self::$databaseAccessLogger;
     }
 }

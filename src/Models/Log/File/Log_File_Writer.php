@@ -20,10 +20,10 @@ use Boostack\Models\Log\Log_Level;
 class Log_File_Writer
 {
     /** @var Log_File_Writer|null The singleton instance of the class. */
-    private static $instance = NULL;
+    private static ?\Boostack\Models\Log\File\Log_File_Writer $logFileWriter = NULL;
 
     /** @var string The path to the log file. */
-    private $logFile;
+    private string $logFile;
 
     /**
      * Log_File_Writer constructor.
@@ -33,10 +33,12 @@ class Log_File_Writer
     private function __construct()
     {
         $path = ROOTPATH . Config::get("log_dir");
-        if (!file_exists($path))
+        if (!file_exists($path)) {
             exit("Error: unable to find log dir: $path");
-        if (!is_writable($path))
+        }
+        if (!is_writable($path)) {
             exit("Error: log dir must be writable");
+        }
         $filename = "boostack-" . date("Y-m-d") . ".log";
         $this->logFile = $path . $filename;
     }
@@ -46,12 +48,13 @@ class Log_File_Writer
      *
      * @return Log_File_Writer The singleton instance of Log_File_Writer.
      */
-    public static function getInstance()
+    public static function getInstance(): \Boostack\Models\Log\File\Log_File_Writer
     {
-        if (self::$instance == NULL)
-            self::$instance = new Log_File_Writer();
+        if (self::$logFileWriter == NULL) {
+            self::$logFileWriter = new Log_File_Writer();
+        }
 
-        return self::$instance;
+        return self::$logFileWriter;
     }
 
     /**
@@ -61,7 +64,7 @@ class Log_File_Writer
      * @param int $level The level of the log message.
      * @throws \Exception Throws an \Exception if unable to open the log file.
      */
-    public function log($message = NULL, $level = Log_Level::INFORMATION)
+    public function log($message = NULL, $level = Log_Level::INFORMATION): void
     {
         $logFile = fopen($this->logFile, "a");
         if ($logFile == false) {

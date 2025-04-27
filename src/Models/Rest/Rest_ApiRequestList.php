@@ -44,11 +44,10 @@ class Rest_ApiRequestList extends \Boostack\Models\BaseList
 
             $q = $this->PDO->prepare($sql);
             $q->execute();
-            $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
-            return $queryResults;
+            return $q->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -69,11 +68,10 @@ class Rest_ApiRequestList extends \Boostack\Models\BaseList
 
             $q = $this->PDO->prepare($sql);
             $q->execute();
-            $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
-            return $queryResults;
+            return $q->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -95,11 +93,10 @@ class Rest_ApiRequestList extends \Boostack\Models\BaseList
 
             $q = $this->PDO->prepare($sql);
             $q->execute();
-            $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
-            return $queryResults;
+            return $q->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 }

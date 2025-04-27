@@ -62,7 +62,7 @@ class StatusCodes
   const HTTP_SERVICE_UNAVAILABLE = 503;
   const HTTP_GATEWAY_TIMEOUT = 504;
   const HTTP_VERSION_NOT_SUPPORTED = 505;
-  private static $messages = array(
+  private static array $messages = array(
     // [Informational 1xx]
     100 => '100 Continue', 101 => '101 Switching Protocols',
     // [Successful 2xx]
@@ -75,7 +75,7 @@ class StatusCodes
     500 => '500 Internal Server Error', 501 => '501 Not Implemented', 502 => '502 Bad Gateway', 503 => '503 Service Unavailable', 504 => '504 Gateway Timeout', 505 => '505 HTTP Version Not Supported'
   );
 
-  public static function getHttpHeaderFor($code)
+  public static function getHttpHeaderFor($code): string
   {
     return 'HTTP/1.1 ' . self::$messages[$code];
   }
@@ -85,12 +85,12 @@ class StatusCodes
     return self::$messages[$code];
   }
 
-  public static function isError($code)
+  public static function isError($code): bool
   {
     return is_numeric($code) && $code >= self::HTTP_BAD_REQUEST;
   }
 
-  public static function canHaveBody($code)
+  public static function canHaveBody($code): bool
   {
     return
       // True if not in 100s

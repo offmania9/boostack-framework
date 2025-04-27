@@ -39,7 +39,7 @@ class CurlRequest
     /**
      * @var HttpMethod The HTTP method for the cURL request.
      */
-    private $http_method = HttpMethod::GET;
+    private $httpMethod = HttpMethod::GET;
 
     /**
      * @var bool Indicates whether to return the transfer as a string.
@@ -49,7 +49,7 @@ class CurlRequest
     /**
      * @var string The encoding to be used in the cURL request.
      */
-    private $encoding = "";
+    private string $encoding = "";
 
     /**
      * @var array An array of GET fields for the cURL request.
@@ -69,19 +69,14 @@ class CurlRequest
     /**
      * @var string The User-Agent header value.
      */
-    private $userAgent = 'Boostack Curl';
-
-    /**
-     * Constructor for CurlRequest class.
-     */
-    public function __construct() {}
+    private string $userAgent = 'Boostack Curl';
 
     /**
      * Adds a custom header to the cURL request.
      *
      * @param mixed $data The header data to be added.
      */
-    public function addHeader($data)
+    public function addHeader($data): void
     {
         $this->customHeader[] = $data;
     }
@@ -91,7 +86,7 @@ class CurlRequest
      *
      * @param string $endpoint The URL endpoint to be set.
      */
-    public function setEndpoint($endpoint)
+    public function setEndpoint($endpoint): void
     {
         $this->endpoint = $endpoint;
     }
@@ -99,11 +94,11 @@ class CurlRequest
     /**
      * Sets the HTTP method for the cURL request.
      *
-     * @param HttpMethod $method The HTTP method to be set.
+     * @param HttpMethod $httpMethod The HTTP method to be set.
      */
-    public function setHttpMethod(HttpMethod $method)
+    public function setHttpMethod(HttpMethod $httpMethod): void
     {
-        $this->http_method = $method;
+        $this->httpMethod = $httpMethod;
     }
 
     /**
@@ -112,13 +107,12 @@ class CurlRequest
      * @param bool $isContentTypeJSON A boolean indicating whether to set Content-Type to application/json.
      *                                 If true, sets the Content-Type header to application/json.
      */
-    public function setContentTypeJSON(bool $isContentTypeJSON)
+    public function setContentTypeJSON(bool $isContentTypeJSON): void
     {
-        if ($isContentTypeJSON)
+        if ($isContentTypeJSON) {
             $this->customHeader["contentTypeJson"] = "Content-Type: application/json";
-        else {
-            if (!empty($this->customHeader["contentTypeJson"]))
-                unset($this->customHeader["contentTypeJson"]);
+        } elseif (!empty($this->customHeader["contentTypeJson"])) {
+            unset($this->customHeader["contentTypeJson"]);
         }
     }
 
@@ -127,7 +121,7 @@ class CurlRequest
      *
      * @param string $userAgent The User-Agent header value to be set.
      */
-    public function setUserAgent(string $userAgent)
+    public function setUserAgent(string $userAgent): void
     {
         $this->userAgent = $userAgent;
     }
@@ -137,7 +131,7 @@ class CurlRequest
      *
      * @param mixed $returnTransfer A boolean indicating whether to return the transfer as a string.
      */
-    public function setReturnTransfer($returnTransfer)
+    public function setReturnTransfer($returnTransfer): void
     {
         $this->return_transfer = $returnTransfer;
     }
@@ -147,7 +141,7 @@ class CurlRequest
      *
      * @param array $fields An array of GET fields to be set.
      */
-    public function setGetFields($fields)
+    public function setGetFields($fields): void
     {
         $this->getFields = $fields;
     }
@@ -157,10 +151,11 @@ class CurlRequest
      *
      * @param bool $isPost A boolean indicating whether the request is a POST request.
      */
-    public function setIsPost(bool $isPost)
+    public function setIsPost(bool $isPost): void
     {
-        if ($isPost)
-            $this->http_method = HttpMethod::POST;
+        if ($isPost) {
+            $this->httpMethod = HttpMethod::POST;
+        }
     }
 
     /**
@@ -168,7 +163,7 @@ class CurlRequest
      *
      * @param array $fields An array of POST fields to be set.
      */
-    public function setPostFields($fields)
+    public function setPostFields($fields): void
     {
         $this->postFields = $fields;
     }
@@ -178,7 +173,7 @@ class CurlRequest
      *
      * @param mixed $data The custom header data to be set.
      */
-    public function setCustomHeader($data)
+    public function setCustomHeader($data): void
     {
         $this->customHeader = $data;
     }
@@ -188,15 +183,14 @@ class CurlRequest
      *
      * @return string The cURL command string.
      */
-    public function getCurlString()
+    public function getCurlString(): string
     {
         $r = 'curl ' . $this->endpoint . ' \\';
         foreach ($this->customHeader as $h) {
             $r .=  ' -H "' . $h . '" \\';
         }
-        $r .=  " -d '" . json_encode($this->postFields) . "'";
 
-        return $r;
+        return $r . (" -d '" . json_encode($this->postFields) . "'");
     }
 
     /**
@@ -204,9 +198,9 @@ class CurlRequest
      *
      * @return MessageBag The response from the cURL request.
      */
-    public function send()
+    public function send(): \Boostack\Models\MessageBag
     {
-        $response = new \Boostack\Models\MessageBag();
+        $messageBag = new \Boostack\Models\MessageBag();
 
         $endpoint = $this->endpoint;
         if (!empty($this->getFields)) {
@@ -217,7 +211,7 @@ class CurlRequest
         curl_setopt($ch, CURLOPT_URL, $endpoint);
         curl_setopt($ch, CURLOPT_ENCODING, $this->encoding);
 
-        switch ($this->http_method) {
+        switch ($this->httpMethod) {
             case HttpMethod::POST:
                 curl_setopt($ch, CURLOPT_POST, 1);
                 if (!empty($this->postFields)) {
@@ -228,7 +222,7 @@ class CurlRequest
             case HttpMethod::PATCH:
             case HttpMethod::DELETE:
             case HttpMethod::OPTIONS:
-                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $this->http_method->value);
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $this->httpMethod->value);
                 if (!empty($this->postFields)) {
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postFields);
                 }
@@ -246,7 +240,7 @@ class CurlRequest
             curl_setopt($ch, CURLOPT_HTTPHEADER, $this->customHeader);
         }
 
-        if (!empty($this->userAgent)) {
+        if ($this->userAgent !== '' && $this->userAgent !== '0') {
             curl_setopt($ch, CURLOPT_USERAGENT, $this->userAgent);
         }
 
@@ -256,13 +250,13 @@ class CurlRequest
 
         $curlResult = curl_exec($ch);
         if ($curlResult === false) {
-            $response->error = true;
-            $response->data = curl_error($ch);
+            $messageBag->error = true;
+            $messageBag->data = curl_error($ch);
         } else {
-            $response->error = false;
-            $response->data = $curlResult;
+            $messageBag->error = false;
+            $messageBag->data = $curlResult;
         }
         curl_close($ch);
-        return $response;
+        return $messageBag;
     }
 }

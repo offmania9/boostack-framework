@@ -33,12 +33,12 @@ class Event extends BaseClassTraced
         parent::init($id);
     }
 
-    public static function createFromCurrentUser($name, $description = NULL)
+    public static function createFromCurrentUser($name, $description = NULL): \Boostack\Models\Events\Event
     {
         return self::create($name, $description, Session::getUserID());
     }
 
-    public static function create($name, $description = NULL, $id_user_from = NULL,)
+    public static function create($name, $description = NULL, $id_user_from = NULL,): \Boostack\Models\Events\Event
     {
         $event = new Event();
         $event->id_user = $id_user_from;
@@ -48,10 +48,11 @@ class Event extends BaseClassTraced
         return $event;
     }
 
-    public function notify($NotificationType = NotificationType::WEB, \DateTime $send_date = NULL)
+    public function notify($NotificationType = NotificationType::WEB, \DateTime $send_date = NULL): \Boostack\Models\Events\Notification
     {
-        if(!NotificationType::isValid($NotificationType))
+        if (!NotificationType::isValid($NotificationType)) {
             throw new \Exception("NotificationType is not valid");
+        }
         $notification = new Notification();
         $notification->id_user_from = $this->id_user;
         $notification->id_event = $this->id;
@@ -61,18 +62,14 @@ class Event extends BaseClassTraced
         return $notification;
     }
 
-    public function createNotification(array $to_user_ids, NotificationType $type = NotificationType::WEB, \DateTime $send_date = NULL)
+    public function createNotification(array $to_user_ids, NotificationType $notificationType = NotificationType::WEB, \DateTime $send_date = NULL): void
     {
         if (count($to_user_ids) > 0) {
             $notification = new Notification();
             $notification->id_user_from = $this->id_user;
-            $notification->type = $type;
+            $notification->type = $notificationType;
             $notification->send_date = $send_date;
             $notification->save();
-            foreach ($to_user_ids as $id_user_to) {
-                if ($type == NotificationType::WEB) {
-                }
-            }
         } else {
             throw new \Exception("sendNotification Error: user ids to send is empty");
         }

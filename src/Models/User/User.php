@@ -25,9 +25,9 @@ use \Firebase\JWT\JWT;
 class User implements \JsonSerializable
 {
 
-    protected $id = null;
+    protected $id;
 
-    protected $PDO = null;
+    protected $PDO;
 
     protected array $objects = [
         User_Entity::class => null,
@@ -51,10 +51,8 @@ class User implements \JsonSerializable
         foreach ($this->objects as $class => &$object) {
             if (empty($object)) {
                 $object = new $class();
-                if (is_object($object)) {
-                    foreach ($object->getAttributes() as $attribute) {
-                        $this->attributes[$attribute] = $class;
-                    }
+                foreach ($object->getAttributes() as $attribute) {
+                    $this->attributes[$attribute] = $class;
                 }
             }
         }
@@ -63,10 +61,8 @@ class User implements \JsonSerializable
     /**
      * Fills the object with the key-value array passed as a parameter (invoking __get).
      * If the ID is present, it sets it in all sub-instances.
-     *
-     * @param array $array
      */
-    public function fill(array $array)
+    public function fill(array $array): void
     {
         if (array_key_exists("id", $array)) {
             foreach ($this->objects as $object) {
@@ -85,7 +81,7 @@ class User implements \JsonSerializable
      *
      * @param mixed $id
      */
-    public function load($id)
+    public function load($id): void
     {
         $this->id = $id;
     }
@@ -99,7 +95,7 @@ class User implements \JsonSerializable
      * @param mixed|null $forcedID
      * @throws \Exception
      */
-    public function save($forcedID = null)
+    public function save($forcedID = null): void
     {
         try {
             $this->PDO->beginTransaction();
@@ -135,19 +131,19 @@ class User implements \JsonSerializable
      *
      * @throws \Exception If the instance does not have an 'id' field to be deleted.
      */
-    public function delete()
+    public function delete(): void
     {
         if (empty($this->id)) {
             throw new \Exception("Instance must have 'id' field to be deleted");
         }
         try {
             $this->PDO->beginTransaction();
-            foreach ($this->objects as $objectInstance) {
-                if (is_object($objectInstance)) {
-                    if (empty($objectInstance->id) && $objectInstance->exist($this->id)) {
-                        $objectInstance->load($this->id);
+            foreach ($this->objects as $object) {
+                if (is_object($object)) {
+                    if (empty($object->id) && $object->exist($this->id)) {
+                        $object->load($this->id);
                     }
-                    $objectInstance->delete();
+                    $object->delete();
                 }
             }
             $this->PDO->commit();
@@ -197,13 +193,12 @@ class User implements \JsonSerializable
         }
         $className = $this->attributes[$property];
         $objectInstance = $this->objects[$className];
-        if (!empty($this->id) && (empty($objectInstance->id) || ($className !== "Boostack\Models\User\User_Entity" && $className !== "Boostack\Models\User\User"))) {
-            if ($objectInstance::exist($this->id)) {
-                $objectInstance->load($this->id);
-            }
+        if (!empty($this->id) && (empty($objectInstance->id) || $className !== "Boostack\Models\User\User_Entity" && $className !== "Boostack\\Models\\User\\User") && $objectInstance::exist($this->id)) {
+            $objectInstance->load($this->id);
         }
-        if (!empty($objectInstance->$property))
+        if (!empty($objectInstance->$property)) {
             return $objectInstance->$property;
+        }
         return "";
     }
 
@@ -356,7 +351,7 @@ class User implements \JsonSerializable
     /**
      * Refreshes the remember-me cookie for the user.
      */
-    public function refreshRememberMeCookie()
+    public function refreshRememberMeCookie(): void
     {
         $cookieHash = Request::generateCookieHash();
         $this->session_cookie = $cookieHash;
@@ -367,9 +362,6 @@ class User implements \JsonSerializable
 
     /**
      * Creates a JWT token for the user.
-     *
-     * @param int|null $expirationTimestamp
-     * @return User_ApiJWTToken
      */
     public function createJWTToken(?int $expirationTimestamp = null): User_ApiJWTToken
     {
@@ -377,7 +369,7 @@ class User implements \JsonSerializable
         $time = time();
         $exp = $time + Config::get("api_expire");
 
-        if (!empty($expirationTimestamp) && $expirationTimestamp > $time) {
+        if ($expirationTimestamp !== null && $expirationTimestamp !== 0 && $expirationTimestamp > $time) {
             $exp = $expirationTimestamp;
         }
 
@@ -394,19 +386,19 @@ class User implements \JsonSerializable
 
         $tokenEncoded = JWT::encode($token, $secretKey, 'HS256');
 
-        $userApi = new User_ApiJWTToken();
-        $userApi->id_user = $this->id;
-        $userApi->token = $tokenEncoded;
-        $userApi->issuer_url = $token["iss"];
-        $userApi->audience_url = $token["aud"];
-        $userApi->issued_time = $token["iat"];
-        $userApi->not_before_time = $token["nbf"];
-        $userApi->expired_time = $token["exp"];
-        $userApi->expired_timestamp = date('Y-m-d H:i:s', $token["exp"]);
-        $userApi->revoked_time = null;
-        $userApi->save();
+        $userApiJWTToken = new User_ApiJWTToken();
+        $userApiJWTToken->id_user = $this->id;
+        $userApiJWTToken->token = $tokenEncoded;
+        $userApiJWTToken->issuer_url = $token["iss"];
+        $userApiJWTToken->audience_url = $token["aud"];
+        $userApiJWTToken->issued_time = $token["iat"];
+        $userApiJWTToken->not_before_time = $token["nbf"];
+        $userApiJWTToken->expired_time = $token["exp"];
+        $userApiJWTToken->expired_timestamp = date('Y-m-d H:i:s', $token["exp"]);
+        $userApiJWTToken->revoked_time = null;
+        $userApiJWTToken->save();
 
-        return $userApi;
+        return $userApiJWTToken;
     }
 
     /**
@@ -428,7 +420,7 @@ class User implements \JsonSerializable
         ]);
 
         if (Config::get('useMailgun')) {
-            $mail = new \Boostack\Models\Email\Email_Mailgun([
+            $emailMailgun = new \Boostack\Models\Email\Email_Mailgun([
                 "from_mail" => Config::get("mail_from"),
                 "from_name" => Config::get("name_from"),
                 "bcc" => Config::get("mail_bcc"),
@@ -437,7 +429,7 @@ class User implements \JsonSerializable
                 "message" => $msg
             ]);
 
-            if (!$mail->send()) {
+            if (!$emailMailgun->send()) {
                 throw new \Exception("Error sending confirmation email (sendConfirmationMail)");
             }
         }
@@ -461,7 +453,7 @@ class User implements \JsonSerializable
         ]);
 
         if (Config::get('useMailgun')) {
-            $mail = new \Boostack\Models\Email\Email_Mailgun([
+            $emailMailgun = new \Boostack\Models\Email\Email_Mailgun([
                 "from_mail" => Config::get("mail_from"),
                 "from_name" => Config::get("name_from"),
                 "bcc" => Config::get("mail_bcc"),
@@ -470,7 +462,7 @@ class User implements \JsonSerializable
                 "message" => $msg
             ]);
 
-            if (!$mail->send()) {
+            if (!$emailMailgun->send()) {
                 throw new \Exception("Error sending welcome email (sendWelcomeMail)");
             }
         }
@@ -483,12 +475,12 @@ class User implements \JsonSerializable
      *
      * @return User_SSOList List of SSO methods associated with the user
      */
-    public function getMySSOs()
+    public function getMySSOs(): \Boostack\Models\User\User_SSOList
     {
-        $frlist = new User_SSOList();
+        $userSSOList = new User_SSOList();
         $filter = array();
         $filter[] = array("user_id", "=", $this->id);
-        $frlist->view($filter, "id", "desc");
-        return $frlist;
+        $userSSOList->view($filter, "id", "desc");
+        return $userSSOList;
     }
 }

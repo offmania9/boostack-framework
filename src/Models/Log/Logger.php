@@ -27,7 +27,7 @@ class Logger
      * @param int $type The type of log driver to use (default is Log_Driver::DATABASE).
      * @throws \Exception If the log type is not found.
      */
-    public static function write($message = "", $level = Log_Level::INFORMATION, $type = Log_Driver::DATABASE)
+    public static function write($message = "", $level = Log_Level::INFORMATION, $type = Log_Driver::DATABASE): void
     {
         switch ($type) {
             case Log_Driver::DATABASE:

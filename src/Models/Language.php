@@ -21,11 +21,11 @@ class Language
     {
     }
 
-    protected static $translatedLabels = null;
+    protected static $translatedLabels;
     /**
      * Initialize the language settings.
      */
-    public static function init()
+    public static function init(): void
     {
         // Find the language based on configuration
         $language = self::findLanguage();
@@ -53,9 +53,9 @@ class Language
         if (is_array(self::$translatedLabels)) {
             $keys = explode(".", $key);
             $tempArray = self::$translatedLabels;
-            foreach ($keys as $k) {
-                if (!empty($tempArray[$k])) {
-                    $tempArray = $tempArray[$k];
+            foreach ($keys as $key) {
+                if (!empty($tempArray[$key])) {
+                    $tempArray = $tempArray[$key];
                 } else {
                     return "";
                 }
@@ -78,17 +78,15 @@ class Language
         // Check if the default language should be forced
         if (Config::get("language_force_default")) {
             $language = $defaultLanguage;
-        } elseif (!empty(Request::hasQueryParam("lang"))) {
+        } elseif (Request::hasQueryParam("lang")) {
             $language = Request::getQueryParam("lang");
-        } else {
-            if (Config::get("session_on") && \Boostack\Models\Session\Session::get("SESS_LANGUAGE") !== "") { // if is set in the user session
-                $language = \Boostack\Models\Session\Session::get("SESS_LANGUAGE");
-            } else { // if isn't set in the user session, fetch it from browser
-                if (Request::hasServerParam('HTTP_ACCEPT_LANGUAGE')) {
-                    $language = explode(',', Request::getServerParam('HTTP_ACCEPT_LANGUAGE'));
-                    $language = strtolower(substr(chop($language[0]), 0, 2));
-                }
-            }
+        } elseif (Config::get("session_on") && \Boostack\Models\Session\Session::get("SESS_LANGUAGE") !== "") {
+            // if is set in the user session
+            $language = \Boostack\Models\Session\Session::get("SESS_LANGUAGE");
+        } elseif (Request::hasServerParam('HTTP_ACCEPT_LANGUAGE')) {
+            // if isn't set in the user session, fetch it from browser
+            $language = explode(',', Request::getServerParam('HTTP_ACCEPT_LANGUAGE'));
+            $language = strtolower(substr(rtrim($language[0]), 0, 2));
         }
 
         if (in_array($language, Config::get("enabled_languages"))) {
@@ -104,7 +102,7 @@ class Language
      * @param string $lang The language to set in session.
      * @throws \Exception_Misconfiguration If session or database is not enabled.
      */
-    private static function setSessionLanguage($lang)
+    private static function setSessionLanguage($lang): void
     {
         Config::constraint("session_on");
         Config::constraint("database_on");
@@ -118,7 +116,7 @@ class Language
      * @return array The translated labels.
      * @throws \Exception If language file not found.
      */
-    private static function getLabelsFromLanguage($lang)
+    private static function getLabelsFromLanguage(string $lang)
     {
         $filePath = $_SERVER['DOCUMENT_ROOT'] ."/" . Config::get("language_path") . $lang . Config::get("language_file_extension");
         
@@ -126,7 +124,6 @@ class Language
             throw new \Exception("Language file " . $filePath . " not found");
         }
         $jsonFileContent = file_get_contents($filePath);
-        $decodedFileContent = json_decode($jsonFileContent, true);
-        return $decodedFileContent;
+        return json_decode($jsonFileContent, true);
     }
 }

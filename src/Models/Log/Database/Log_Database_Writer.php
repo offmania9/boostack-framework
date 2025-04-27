@@ -36,10 +36,10 @@ class Log_Database_Writer
     private $query;
 
     /** @var \PDO The \PDO instance for interacting with the database. */
-    private $PDO;
+    private $pdo;
 
     /** @var Log_Database_Writer|null The singleton instance of the Log_Database_Writer class. */
-    private static $instance = NULL;
+    private static ?\Boostack\Models\Log\Database\Log_Database_Writer $logDatabaseWriter = NULL;
 
     /** @var string The table name for the log entries. */
     const TABLENAME = "boostack_log";
@@ -50,18 +50,12 @@ class Log_Database_Writer
      * @param null $objUser The user associated with the log entry.
      * @return Log_Database_Writer|null The singleton instance of the Log_Database_Writer class.
      */
-    static function getInstance($objUser = NULL)
+    static function getInstance($objUser = NULL): \Boostack\Models\Log\Database\Log_Database_Writer
     {
-        if (self::$instance == NULL)
-            self::$instance = new Log_Database_Writer($objUser);
-        return self::$instance;
-    }
-
-    /**
-     * Prevents cloning of the Log_Database_Writer instance.
-     */
-    private function __clone()
-    {
+        if (self::$logDatabaseWriter == NULL) {
+            self::$logDatabaseWriter = new Log_Database_Writer($objUser);
+        }
+        return self::$logDatabaseWriter;
     }
 
     /**
@@ -71,8 +65,8 @@ class Log_Database_Writer
      */
     private function __construct($objUser = NULL)
     {
-        $this->PDO = Database_PDO::getInstance();
-        $this->username = (!is_null($objUser)) ? $objUser->id : "Anonymous";
+        $this->pdo = Database_PDO::getInstance();
+        $this->username = (is_null($objUser)) ? "Anonymous" : $objUser->id;
         $this->ip = Request::getIpAddress();
         $this->useragent = Request::sanitizeInput(getenv('HTTP_USER_AGENT'));
         $this->referrer = Request::hasServerParam("HTTP_REFERER") ? Request::getServerParam("HTTP_REFERER") : "";
@@ -85,14 +79,15 @@ class Log_Database_Writer
      * @param null $message The log message.
      * @param string $level The log level.
      */
-    public function Log($message = NULL, $level = "information")
+    public function Log($message = NULL, $level = "information"): void
     {
-        if (!in_array($level, Config::get("log_enabledTypes")))
+        if (!in_array($level, Config::get("log_enabledTypes"))) {
             return;
+        }
         $this->query = substr(htmlspecialchars($this->query, ENT_QUOTES | ENT_HTML401, 'UTF-8'), 0, 2048);
         $sql = "INSERT INTO " . self::TABLENAME . "  (id ,datetime , level, username, ip ,useragent ,referrer ,query ,message)
 				VALUES(NULL, :time , :level, :username, :ip , :useragent, :referrer, :query, :message)";
-        $q = $this->PDO->prepare($sql);
+        $q = $this->pdo->prepare($sql);
         $q->bindValue(':time', date('Y-m-d H:i:s', time()));
         $q->bindValue(':level', $level);
         $q->bindValue(':username', $this->username);

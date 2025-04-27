@@ -17,23 +17,30 @@ class CsvReader
     const DEFAULT_LINES_OFFSET = 0;
     const DEFAULT_HEADING_LINE = -1;
 
-    private $filePath = null;
-    private $fileInstance = null;
+    private string $filePath;
+    private $fileInstance;
     private $delimiter = self::DEFAULT_DELIMITER;
     private $linesOffset = self::DEFAULT_LINES_OFFSET;
-    private $rowIndex = 0;
+    private int $rowIndex = 0;
 
     public function __construct($file, $delimiter = self::DEFAULT_DELIMITER, $linesOffset = self::DEFAULT_LINES_OFFSET)
     {
         $realPath = realpath($file);
-        if (!$realPath) throw new \Exception("File not found");
-        if (!is_readable($realPath)) throw new \Exception("File not readable");
+        if (!$realPath) {
+            throw new \Exception("File not found");
+        }
+        if (!is_readable($realPath)) {
+            throw new \Exception("File not readable");
+        }
         $this->filePath = $realPath;
         $this->delimiter = $delimiter;
         $this->linesOffset = $linesOffset;
     }
 
-    public function fetchAll()
+    /**
+     * @return list<list<(string | null)>>
+     */
+    public function fetchAll(): array
     {
         $fileHandler = $this->openFile($this->filePath);
         $result = array();
@@ -66,10 +73,12 @@ class CsvReader
         return $row;
     }
 
-    private function openFile($path)
+    private function openFile(string $path)
     {
         $fileHandler = fopen($path, "r");
-        if ($fileHandler == false) throw new \Exception("Failed to open file");
+        if ($fileHandler == false) {
+            throw new \Exception("Failed to open file");
+        }
         return $fileHandler;
     }
 }

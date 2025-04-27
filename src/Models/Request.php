@@ -31,7 +31,7 @@ class Request
     /**
      * Initializes the request by registering from global variables.
      */
-    public static function init()
+    public static function init(): void
     {
         self::registerFromGlobals();
     }
@@ -41,9 +41,8 @@ class Request
      *
      * @param string $type The request type (e.g., 'POST', 'QUERY', 'SERVER', 'HEADERS', 'COOKIE', 'REQUEST', 'FILES').
      * @param mixed $param The parameter to check.
-     * @return bool
      */
-    private static function has(string $type, $param): bool
+    private static function has(string $type, string $param): bool
     {
         $params = self::${$type};
 
@@ -69,10 +68,10 @@ class Request
      * @param mixed $param The parameter to retrieve. Can be a simple string or an array-like string '[foo][bar]'.
      * @return mixed|null The value if found, null otherwise.
      */
-    private static function get(string $type, $param)
+    private static function get(string $type, string $param)
     {
         $params = self::${$type};
-        if (is_string($param) && strpos($param, '[') === false) {
+        if (strpos($param, '[') === false) {
             return isset($params[$param]) ? $params[$param] : null;
         }
         $keys = explode('][', rtrim(ltrim($param, '['), ']'));
@@ -90,7 +89,7 @@ class Request
     /**
      * Registers request data from global variables.
      */
-    private static function registerFromGlobals()
+    private static function registerFromGlobals(): void
     {
         self::$query = $_GET;
         self::$post = $_POST;
@@ -339,7 +338,7 @@ class Request
     /**
      * Redirects to the maintenance page.
      */
-    public static function goToMaintenance()
+    public static function goToMaintenance(): void
     {
         header("Location: " . Config::get("url") . Config::get("url_maintenance"));
         exit();
@@ -351,12 +350,13 @@ class Request
      * @param string $virtualPath The virtual path.
      * @return string The friendly URL.
      */
-    public static function getFriendlyUrl($virtualPath)
+    public static function getFriendlyUrl(string $virtualPath): string
     {
         if (Config::get('session_on')) {
             $langUrl = "";
-            if (Config::get('show_default_language_in_URL'))
+            if (Config::get('show_default_language_in_URL')) {
                 $langUrl = Session::get("SESS_LANGUAGE") . "/";
+            }
             return Config::get('url') . $langUrl . $virtualPath;
         }
         return Config::get('url') . $virtualPath;
@@ -367,7 +367,7 @@ class Request
      *
      * @param string $URL The URL to redirect to.
      */
-    public static function goToUrl($URL)
+    public static function goToUrl(string $URL): void
     {
         header("Location: " . $URL);
         exit();
@@ -376,7 +376,7 @@ class Request
     /**
      * Redirects the user to the home page.
      */
-    public static function goToHome()
+    public static function goToHome(): void
     {
         header("Location: " . Config::get("url"));
         exit();
@@ -387,16 +387,16 @@ class Request
      *
      * @param int|null $status_code The HTTP status code to be used for the error page.
      */
-    public static function goToError(int $status_code = NULL)
+    public static function goToError(int $status_code = NULL): void
     {
-        header("Location: " . Config::get("url") . "error/" . (empty($status_code) ? "" : $status_code));
+        header("Location: " . Config::get("url") . "error/" . ($status_code === null || $status_code === 0 ? "" : $status_code));
         exit();
     }
 
     /**
      * Redirects the user to the logout page.
      */
-    public static function goToLogout()
+    public static function goToLogout(): void
     {
         header("Location: " . Config::get("url") . "logout");
         exit();
@@ -420,13 +420,12 @@ class Request
      */
     public static function getIpAddress()
     {
-        $ip = getenv('HTTP_CLIENT_IP') ?:
+        return getenv('HTTP_CLIENT_IP') ?:
             getenv('HTTP_X_FORWARDED_FOR') ?:
             getenv('HTTP_X_FORWARDED') ?:
             getenv('HTTP_FORWARDED_FOR') ?:
             getenv('HTTP_FORWARDED') ?:
             getenv('REMOTE_ADDR');
-        return $ip;
     }
 
     /**
@@ -459,7 +458,7 @@ class Request
      *
      * @return string The generated cookie hash.
      */
-    public static function generateCookieHash()
+    public static function generateCookieHash(): string
     {
         return  md5(time()) . md5(self::getIpAddress() . self::getUserAgent());
     }
@@ -470,9 +469,9 @@ class Request
      * @param string $cookieValue The value of the remember-me cookie.
      * @return bool True if the cookie hash is valid, false otherwise.
      */
-    public static function checkCookieHashValidity($cookieValue)
+    public static function checkCookieHashValidity($cookieValue): bool
     {
-        return substr($cookieValue, 32) == md5(self::getIpAddress() . self::getUserAgent());
+        return substr($cookieValue, 32) === md5(self::getIpAddress() . self::getUserAgent());
     }
 
     /**
@@ -481,12 +480,10 @@ class Request
      * @param int|string $timeLastRequest The time of the last request.
      * @return bool Returns true if the time since the last request is within the accepted time limit, false otherwise.
      */
-    public static function checkAcceptedTimeFromLastRequest()
+    public static function checkAcceptedTimeFromLastRequest(): bool
     {
         $timeLastRequest = Session::getLastImpression();
         $secondsAccepted = Config::get("seconds_accepted_between_requests");
-        if ((!empty($timeLastRequest)) && (time() - $timeLastRequest >= $secondsAccepted))
-            return true;
-        return false;
+        return !empty($timeLastRequest) && time() - $timeLastRequest >= $secondsAccepted;
     }
 }

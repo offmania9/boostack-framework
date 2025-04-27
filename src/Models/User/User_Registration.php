@@ -41,7 +41,6 @@ class User_Registration extends \Boostack\Models\BaseClass
 
     /**
      * User_Registration constructor.
-     * @param null $id
      */
     public function __construct($id = null)
     {

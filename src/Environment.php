@@ -2,7 +2,7 @@
 
 namespace Boostack;
 
-use Boostack\Exception\Exception_TooManyRequests;
+use Boostack\Exceptions\Exception_TooManyRequests;
 use Boostack\Models\Config;
 use Boostack\Models\Request;
 use Boostack\Models\Database\Database_PDO;
@@ -14,7 +14,7 @@ use Boostack\Models\Log\Logger;
 
 class Environment
 {
-    public static function init()
+    public static function init(): void
     {
         try {
             Request::init();
@@ -40,8 +40,9 @@ class Environment
             if (Config::get('language_on')) {
                 Language::init();
             }
-            if (!Request::hasServerParam("DOCUMENT_ROOT"))
+            if (!Request::hasServerParam("DOCUMENT_ROOT")) {
                 throw new \Exception("The DOCUMENT_ROOT environment variable is not set.");
+            }
 
             require_once(Request::getServerParam("DOCUMENT_ROOT") . "/my/pre_content.php");
         } catch (Exception_TooManyRequests $e) {

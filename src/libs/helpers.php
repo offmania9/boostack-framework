@@ -14,7 +14,7 @@
  *
  * @param mixed $args One or more variables to dump.
  */
-function d()
+function d(): void
 {
     $args = func_get_args();
     echo "<pre>";
@@ -29,7 +29,7 @@ function d()
  *
  * @param mixed $args One or more variables to dump.
  */
-function dd()
+function dd(): void
 {
     $args = func_get_args();
     echo "<pre>";
@@ -43,11 +43,11 @@ function dd()
 /**
  * Dump a prepared query in a formatted manner for debugging.
  *
- * @param \PDOStatement $q The prepared query to dump.
+ * @param \PDOStatement $pdoStatement The prepared query to dump.
  */
-function dumpPreparedQuery(\PDOStatement $q)
+function dumpPreparedQuery(\PDOStatement $pdoStatement): void
 {
     echo "<pre>";
-    $q->debugDumpParams();
+    $pdoStatement->debugDumpParams();
     echo "</pre>";
 }

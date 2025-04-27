@@ -54,12 +54,9 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
 
     /**
      * Constructor.
-     *
-     * @param mixed|null $id The ID of the user.
      */
-    public function __construct($id = null)
+    public function __construct()
     {
-        parent::__construct($id);
         $this->soft_delete = true;
     }
 
@@ -69,12 +66,11 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      * @param string $received_token The JWT token to decode.
      * @return array The decoded user data.
      */
-    public static function decode($received_token): array
+    public static function decode(string $received_token): array
     {
         $secret_key = Config::get("api_secret_key");
         $decoded_token = JWT::decode($received_token, new Key($secret_key, 'HS256'));
-        $user_data = (array) $decoded_token;
-        return $user_data;
+        return (array) $decoded_token;
     }
 
     /**
@@ -89,10 +85,10 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
         $filter = array();
         $filter[] = array("id_user", "=", $id_user);
         $filter[] = array("token", "=", $received_token);
-        $list = new User_ApiJWTTokenList();
-        $total_items = $list->view($filter);
+        $userApiJWTTokenList = new User_ApiJWTTokenList();
+        $total_items = $userApiJWTTokenList->view($filter);
         if ($total_items == 1) {
-            return $list->getItemsArray()[0];
+            return $userApiJWTTokenList->getItemsArray()[0];
         }
         return null;
     }
@@ -107,20 +103,24 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
     {
         $jwt = str_replace('Bearer ', '', Request::getHeaderParam("Authorization"));
         $token = User_ApiJWTToken::decode($jwt);
-        if (empty($token["data"]->id_user) || !User::existById($token["data"]->id_user))
+        if (empty($token["data"]->id_user) || !User::existById($token["data"]->id_user)) {
             throw new \Exception("User doesn't exist.");
+        }
 
         $user = new User($token["data"]->id_user);
 
-        if ($user->active == "0")
+        if ($user->active == "0") {
             throw new \Exception("User is not active");
+        }
 
         $bindedTokenObject = User_ApiJWTToken::binded($user->id, $jwt);
-        if (empty($bindedTokenObject))
+        if (!$bindedTokenObject instanceof \Boostack\Models\User\User_ApiJWTToken) {
             throw new \Exception("The token user does not match the user in the token payload");
+        }
 
-        if ($bindedTokenObject->IsRevoked())
+        if ($bindedTokenObject->IsRevoked()) {
             throw new \Exception("The token has been revoked");
+        }
 
         return $user;
     }
@@ -148,15 +148,16 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      * @param int|null $timestamp_from_revoke The timestamp from which to revoke the token.
      * @return bool True if the token was successfully revoked, false otherwise.
      */
-    public function revoke(int $timestamp_from_revoke = null)
+    public function revoke(int $timestamp_from_revoke = null): bool
     {
         if (empty($this->revoked_time)) {
             $this->revoked_time = date('Y-m-d H:i:s', time());
 
-            if (!empty($timestamp_from_revoke) && $timestamp_from_revoke < $this->expired_time && $timestamp_from_revoke > $this->issued_time)
+            if ($timestamp_from_revoke !== null && $timestamp_from_revoke !== 0 && $timestamp_from_revoke < $this->expired_time && $timestamp_from_revoke > $this->issued_time) {
                 $rev_time = date('Y-m-d H:i:s', $timestamp_from_revoke);
-            else
+            } else {
                 $rev_time = $this->revoked_time;
+            }
 
             $this->revoked_from = $rev_time;
             $this->save();
@@ -170,7 +171,7 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      *
      * @return bool True if the token is revoked, false otherwise.
      */
-    public function IsRevoked()
+    public function IsRevoked(): bool
     {
         return !empty($this->revoked_time);
     }
@@ -180,7 +181,7 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      *
      * @return bool True if the token is currently revoked, false otherwise.
      */
-    public function IsNowRevoked()
+    public function IsNowRevoked(): bool
     {
         return !empty($this->revoked_time) && $this->revoked_from <= date('Y-m-d H:i:s', time());
     }

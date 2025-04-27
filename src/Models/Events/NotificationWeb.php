@@ -37,8 +37,9 @@ class NotificationWeb extends BaseClassTraced
     {
         $this->custom_excluded[] = "notification_obj";
         parent::init($id);
-        if ($id !== NULL)
+        if ($id !== NULL) {
             $this->notification_obj = new Notification($this->id_notification);
+        }
     }
 
     /**
@@ -49,9 +50,9 @@ class NotificationWeb extends BaseClassTraced
      *
      * @return User The user who sent the notification.
      */
-    public function getUserFrom()
+    public function getUserFrom(): \Boostack\Models\User\User
     {
-        $parent = new Notification($this->id_notification);
-        return new User($parent->id_user_from);
+        $notification = new Notification($this->id_notification);
+        return new User($notification->id_user_from);
     }
 }

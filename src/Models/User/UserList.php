@@ -21,15 +21,15 @@ use Boostack\Models\User\User_Entity;
 class UserList extends \Boostack\Models\BaseList
 {
 
-    protected $PDO = null;
+    protected $PDO;
 
-    protected $items = null;
+    protected $items = [];
 
-    protected $objects = null;
+    protected $objects;
 
     protected $baseClassName = User::class;
 
-    protected $mainTablename = null;
+    protected $mainTablename;
 
     protected $otherTablenames = array();
 
@@ -39,7 +39,6 @@ class UserList extends \Boostack\Models\BaseList
     public function __construct($classes = array(User_Entity::class))
     {
         $this->PDO = Database_PDO::getInstance();
-        $this->items = [];
         $this->objects = $classes;
         $classesCount = count($classes);
         $this->mainTablename = (new $this->objects[0])->getTablename();
@@ -58,7 +57,7 @@ class UserList extends \Boostack\Models\BaseList
      * @return int The number of loaded elements.
      * @throws \PDOException If a database \Exception occurs.
      */
-    public function loadAll($orderColumn = null, $orderType = null)
+    public function loadAll($orderColumn = null, $orderType = null): int
     {
         try {
             $ob = $orderColumn == null ? "" : " ORDER BY " . $orderColumn . " ";
@@ -68,11 +67,10 @@ class UserList extends \Boostack\Models\BaseList
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
             $this->fill($queryResults);
-            $countResult = count($queryResults);
-            return $countResult;
+            return count($queryResults);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -83,18 +81,17 @@ class UserList extends \Boostack\Models\BaseList
      * @return array The user ids.
      * @throws \PDOException If a database \Exception occurs.
      */
-    public static function getIdsByPrivilege(int $privilege = UserPrivilege::ADMIN)
+    public static function getIdsByPrivilege(int $privilege = UserPrivilege::ADMIN): array
     {
         try {
             $sql = "SELECT id FROM boostack_user WHERE privilege=:privilege";
             $q = Database_PDO::getInstance()->prepare($sql);
             $q->bindValue(':privilege', $privilege);
             $q->execute();
-            $queryResults = $q->fetchAll(\PDO::FETCH_COLUMN);
-            return $queryResults;
+            return $q->fetchAll(\PDO::FETCH_COLUMN);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -105,18 +102,17 @@ class UserList extends \Boostack\Models\BaseList
      * @return array The user ids without current user
      * @throws \PDOException If a database \Exception occurs.
      */
-    public static function getIdsByPrivilegeWithoutCurrentUser(int $privilege = UserPrivilege::ADMIN)
+    public static function getIdsByPrivilegeWithoutCurrentUser(int $privilege = UserPrivilege::ADMIN): array
     {
         try {
             $sql = "SELECT id FROM boostack_user WHERE privilege=:privilege AND id != " . Session::getUserID();
             $q = Database_PDO::getInstance()->prepare($sql);
             $q->bindValue(':privilege', $privilege);
             $q->execute();
-            $queryResults = $q->fetchAll(\PDO::FETCH_COLUMN);
-            return $queryResults;
+            return $q->fetchAll(\PDO::FETCH_COLUMN);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -134,7 +130,9 @@ class UserList extends \Boostack\Models\BaseList
         foreach ($array as $elem) {
             $baseClassInstance = new $this->baseClassName;
             // Exclude the password to prevent re-hashing
-            if ($excludePwd) unset($elem["pwd"]);
+            if ($excludePwd) {
+                unset($elem["pwd"]);
+            }
             $baseClassInstance->fill($elem);
             $this->items[] = $baseClassInstance;
         }
@@ -145,13 +143,13 @@ class UserList extends \Boostack\Models\BaseList
      *
      * @return string The generated SQL query part.
      */
-    private function getSQLFromJoinPart()
+    private function getSQLFromJoinPart(): string
     {
         $sql = " FROM " . $this->mainTablename;
         $otherTablenamesCount = count($this->otherTablenames);
         if ($otherTablenamesCount > 0) {
-            foreach ($this->otherTablenames as $otherTable) {
-                $sql .= " JOIN " . $otherTable . " ON " . $this->mainTablename . ".id = " . $otherTable . ".id";
+            foreach ($this->otherTablenames as $otherTablename) {
+                $sql .= " JOIN " . $otherTablename . " ON " . $this->mainTablename . ".id = " . $otherTablename . ".id";
             }
         }
         return $sql;

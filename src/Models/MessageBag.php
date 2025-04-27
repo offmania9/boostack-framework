@@ -18,7 +18,7 @@ class MessageBag implements \JsonSerializable
     /**
      * @var bool Indicates if an error has occurred.
      */
-    private $error;
+    private $error = false;
 
     /**
      * @var int|null The error code.
@@ -36,27 +36,15 @@ class MessageBag implements \JsonSerializable
     private $data;
 
     /**
-     * MessageBag constructor.
-     */
-    public function __construct()
-    {
-        $this->error = false;
-        $this->message = null;
-        $this->data = null;
-    }
-
-    /**
      * Removes the error flag.
      */
-    public function removeError()
+    public function removeError(): void
     {
         $this->error = false;
     }
 
     /**
      * Checks if an error has occurred.
-     *
-     * @return bool
      */
     public function hasError(): bool
     {
@@ -65,8 +53,6 @@ class MessageBag implements \JsonSerializable
 
     /**
      * Serializes the object to a JSON format.
-     *
-     * @return array
      */
     public function jsonSerialize(): array
     {
@@ -80,8 +66,6 @@ class MessageBag implements \JsonSerializable
 
     /**
      * Converts the object to an stdClass object.
-     *
-     * @return object
      */
     public function toObject(): object
     {
@@ -95,8 +79,6 @@ class MessageBag implements \JsonSerializable
 
     /**
      * Converts the object to a JSON string.
-     *
-     * @return string
      */
     public function toJSON(): string
     {

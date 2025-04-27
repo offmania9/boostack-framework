@@ -12,9 +12,6 @@ namespace Boostack\Models;
 class ListObjectId
 {
 
-    /**
-     * @var null
-     */
     private $oid_list;
 
     /**
@@ -32,7 +29,7 @@ class ListObjectId
      *
      * @param mixed $val The object ID to add.
      */
-    public function Add($val)
+    public function Add($val): void
     {
         $this->oid_list[] = $val;
     }

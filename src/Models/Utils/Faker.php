@@ -19,7 +19,7 @@ class Faker
      * @param int $length The length of the string to generate.
      * @return string A random string.
      */
-    public static function string($length = 10)
+    public static function string($length = 10): string
     {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charactersLength = strlen($characters);
@@ -37,7 +37,7 @@ class Faker
      * @param int $max The maximum value.
      * @return int A random integer.
      */
-    public static function integer($min = 0, $max = 1000)
+    public static function integer($min = 0, $max = 1000): int
     {
         return rand($min, $max);
     }
@@ -63,7 +63,7 @@ class Faker
      * @param int $stringLength The length of each string.
      * @return array An array of random strings.
      */
-    public static function stringArray($numItems = 5, $stringLength = 10)
+    public static function stringArray($numItems = 5, $stringLength = 10): array
     {
         $array = [];
         for ($i = 0; $i < $numItems; $i++) {
@@ -80,7 +80,7 @@ class Faker
      * @param int $max The maximum value for each integer.
      * @return array An array of random integers.
      */
-    public static function integerArray($numItems = 5, $min = 0, $max = 1000)
+    public static function integerArray($numItems = 5, $min = 0, $max = 1000): array
     {
         $array = [];
         for ($i = 0; $i < $numItems; $i++) {
@@ -98,7 +98,7 @@ class Faker
      * @param int $decimals The number of decimal places for each float.
      * @return array An array of random floats.
      */
-    public static function floatArray($numItems = 5, $min = 0, $max = 1000, $decimals = 2)
+    public static function floatArray($numItems = 5, $min = 0, $max = 1000, $decimals = 2): array
     {
         $array = [];
         for ($i = 0; $i < $numItems; $i++) {
@@ -112,7 +112,7 @@ class Faker
      * 
      * @return string A random email address.
      */
-    public static function email()
+    public static function email(): string
     {
         $domains = ['example.com', 'mail.com', 'test.org', 'faker.net'];
         return self::string(10) . '@' . $domains[array_rand($domains)];
@@ -123,7 +123,7 @@ class Faker
      * 
      * @return string A random phone number.
      */
-    public static function phoneNumber()
+    public static function phoneNumber(): string
     {
         return '+39 ' . rand(310, 399) . ' ' . rand(1000000, 9999999);
     }
@@ -136,7 +136,7 @@ class Faker
      * @param string $end The end date for the random date generation.
      * @return string A random date and time in the specified format.
      */
-    public static function dateTime($format = 'Y-m-d H:i:s', $start = '-30 years', $end = 'now')
+    public static function dateTime($format = 'Y-m-d H:i:s', $start = '-30 years', $end = 'now'): string
     {
         $startDate = strtotime($start);
         $endDate = strtotime($end);
@@ -149,7 +149,7 @@ class Faker
      * 
      * @return string A random URL.
      */
-    public static function url()
+    public static function url(): string
     {
         return 'https://www.' . self::string(10) . '.com';
     }
@@ -163,7 +163,7 @@ class Faker
      * @param int $decimals The number of decimal places for each component.
      * @return array A vector of floats.
      */
-    public static function vector($length = 50, $min = -1, $max = 1, $decimals = 3)
+    public static function vector($length = 50, $min = -1, $max = 1, $decimals = 3): array
     {
         $vector = [];
         for ($i = 0; $i < $length; $i++) {

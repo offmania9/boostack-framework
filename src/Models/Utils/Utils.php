@@ -21,7 +21,7 @@ class Utils
      */
     public static function isStrongPassword($pwd)
     {
-        return preg_match("#.*^(?=.{8,20})(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*\W).*$#", $pwd);
+        return preg_match("#.*^(?=.{8,20})(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*\$#", $pwd);
     }
 
     /**
@@ -30,7 +30,7 @@ class Utils
      * @param string $string The string to be checked.
      * @return bool Returns true if the string is a valid JSON, false otherwise.
      */
-    public static function isJson($string)
+    public static function isJson($string): bool
     {
         json_decode($string);
         return (json_last_error() == JSON_ERROR_NONE);
@@ -41,7 +41,7 @@ class Utils
      *
      * @param mixed $var The variable to be debugged.
      */
-    public static function debug($var)
+    public static function debug($var): void
     {
         ini_set('display_errors', 1);
         echo '<pre>';
@@ -55,10 +55,11 @@ class Utils
      * @param float|null $number The number to be formatted.
      * @return string The formatted amount. Returns "-" if the number is null.
      */
-    public static function formatAmount($number)
+    public static function formatAmount($number): string
     {
-        if ($number == null)
+        if ($number == null) {
             return "-";
+        }
         return number_format($number, 2, ",", ".");
     }
 
@@ -70,7 +71,7 @@ class Utils
      * @param int $decimals Number of decimal places (default is 0).
      * @return string The formatted number.
      */
-    public static function formatNumber($number, $decimals = 0)
+    public static function formatNumber($number, $decimals = 0): string
     {
         return number_format($number, $decimals, ",", ".");
     }
@@ -82,7 +83,7 @@ class Utils
      * @param string $string The string from which to remove accents.
      * @return string The string without accents.
      */
-    public static function removeAccents($string)
+    public static function removeAccents($string): string
     {
         $string = trim($string);
         $unwanted_array = array(
@@ -148,14 +149,12 @@ class Utils
             'ú' => 'u\'',
             'û' => 'u',
             'ý' => 'y',
-            'ý' => 'y',
             'þ' => 'b',
             'ÿ' => 'y',
             '`' => '\'',
             '’' => '\''
         );
-        $string = strtr($string, $unwanted_array);
-        return $string;
+        return strtr($string, $unwanted_array);
     }
 
 
@@ -165,7 +164,7 @@ class Utils
      * @param int $code The error code.
      * @return string The description of the error code.
      */
-    public static function getFileErrorDescription($code)
+    public static function getFileErrorDescription($code): string
     {
         $errors = array(
             0 => "There is no error, the file uploaded with success",
@@ -186,7 +185,7 @@ class Utils
      * @param int $datetime_timestamp The UNIX timestamp of the datetime.
      * @return string The elapsed time string.
      */
-    public static function getElapsedTime($datetime_timestamp, $datenowFromDB = true)
+    public static function getElapsedTime($datetime_timestamp, $datenowFromDB = true): string
     {
         $now = $datenowFromDB ? getDateTimeTimestamp(getDateTime()) : time();
         $et =  $now - $datetime_timestamp;
@@ -211,13 +210,10 @@ class Utils
      * @param string $email The email address to be checked.
      * @return bool True if the email address is in correct format, false otherwise.
      */
-    public static function checkEmailFormat($email)
+    public static function checkEmailFormat($email): bool
     {
         $regexp = "/^[a-z0-9]+([_\\.-][a-z0-9]+)*@([a-z0-9]+([\.-][a-z0-9]+)*)+\\.[a-z]{2,}$/i";
-        if ($email == "" || !preg_match($regexp, $email) || strlen($email >= 255)) {
-            return false;
-        }
-        return true;
+        return !($email == "" || !preg_match($regexp, $email) || strlen($email >= 255));
     }
 
     /**
@@ -227,20 +223,20 @@ class Utils
      * @param int $strength The strength of the password.
      * @return string The generated password.
      */
-    public static function passwordGenerator($length = 9, $strength = 0)
+    public static function passwordGenerator($length = 9, $strength = 0): string
     {
         $vowels = 'aeuy';
         $consonants = 'bdghjmnpqrstvz';
-        if ($strength & 1) {
+        if (($strength & 1) !== 0) {
             $consonants .= 'BDGHJLMNPQRSTVWXZ';
         }
-        if ($strength & 2) {
+        if (($strength & 2) !== 0) {
             $vowels .= "AEUY";
         }
-        if ($strength & 4) {
+        if (($strength & 4) !== 0) {
             $consonants .= '23456789';
         }
-        if ($strength & 8) {
+        if (($strength & 8) !== 0) {
             $consonants .= '@#$%';
         }
         $password = '';
@@ -263,7 +259,7 @@ class Utils
      * @param int $length The length of the random string.
      * @return string The generated random string.
      */
-    public static function getRandomString($length)
+    public static function getRandomString($length): string
     {
         $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charsLength = strlen($chars) - 1;
@@ -281,7 +277,7 @@ class Utils
      * @param string $keyspace The characters to choose from.
      * @return string The generated random string.
      */
-    public static function getSecureRandomString($length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    public static function getSecureRandomString($length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'): string
     {
         $str = '';
         $max = mb_strlen($keyspace, '8bit') - 1;
@@ -300,11 +296,12 @@ class Utils
      * @return bool True if the string format is valid, false otherwise.
      * @throws \Exception If $throwException is true and the format is not valid.
      */
-    public static function checkStringFormat($string, $fieldname = "Password", $throwException = true)
+    public static function checkStringFormat($string, string $fieldname = "Password", $throwException = true): bool
     {
         if ($string == "" || strlen($string) < 6) {
-            if ($throwException)
+            if ($throwException) {
                 throw new \Exception("Attention! " . $fieldname . " value is wrong.", 4);
+            }
             return false;
         }
         return true;
@@ -318,7 +315,7 @@ class Utils
      * @param string|null $end The ending string (optional).
      * @return string The extracted substring.
      */
-    public static function extractString($string, $start, $end = null)
+    public static function extractString($string, $start, $end = null): string
     {
         if (is_null($end)) {
             $arr = explode($start, $string);
@@ -326,7 +323,9 @@ class Utils
         }
         $string = ' ' . $string;
         $ini = strpos($string, $start);
-        if ($ini == 0) return '';
+        if ($ini == 0) {
+            return '';
+        }
         $ini += strlen($start);
         $len = strpos($string, $end, $ini) - $ini;
         return substr($string, $ini, $len);
@@ -340,7 +339,7 @@ class Utils
      * @param string $ending_word The ending word.
      * @return string The extracted substring.
      */
-    public static function string_between_two_string($str, $starting_word, $ending_word)
+    public static function string_between_two_string($str, $starting_word, $ending_word): string
     {
         $arr = explode($starting_word, $str);
         if (isset($arr[1])) {
@@ -376,7 +375,7 @@ class Utils
      * @param int $frequency The frequency of occurrence after which the string should be added.
      * @return string The resulting string.
      */
-    public static function addStringAfterCharRepeats($s, $c, $n, $frequency)
+    public static function addStringAfterCharRepeats($s, $c, string $n, $frequency): string
     {
         $occurrences = 0;
         $result = '';

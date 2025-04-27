@@ -12,7 +12,7 @@ namespace Boostack\Models;
 
 abstract class BasicEnum
 {
-    private static $constCacheArray = NULL;
+    private static ?array $constCacheArray = NULL;
 
     public static function getConstants()
     {
@@ -21,8 +21,8 @@ abstract class BasicEnum
         }
         $calledClass = get_called_class();
         if (!array_key_exists($calledClass, self::$constCacheArray)) {
-            $reflect = new \ReflectionClass($calledClass);
-            self::$constCacheArray[$calledClass] = $reflect->getConstants();
+            $reflectionClass = new \ReflectionClass($calledClass);
+            self::$constCacheArray[$calledClass] = $reflectionClass->getConstants();
         }
         return self::$constCacheArray[$calledClass];
     }

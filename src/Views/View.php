@@ -3,10 +3,10 @@
 namespace Boostack\Views;
 
 use Boostack\Models\Config;
-use Boostack\Exception\Exception_FileNotFound;
+use Boostack\Exceptions\Exception_FileNotFound;
 
 /**
- * Boostack: Template.php
+ * Boostack: View.php
  * ========================================================================
  * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
@@ -18,9 +18,8 @@ use Boostack\Exception\Exception_FileNotFound;
 abstract class View
 
 {
-    private static $customCssFiles;
-
-    private static $customJsFiles;
+    private static ?array $customCssFiles = null;
+    private static ?array $customJsFiles = null;
 
     /**
      * Render a template file.

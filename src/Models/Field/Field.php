@@ -14,7 +14,7 @@ class Field implements \JsonSerializable
 
     private $name;
     private $type;
-    private $rules;
+    private array $rules;
 
     public function __construct($name, $type)
     {
@@ -27,7 +27,7 @@ class Field implements \JsonSerializable
         $this->rules = array();
     }
 
-    public static function rules($name, $type)
+    public static function rules($name, $type): \Boostack\Models\Field\FieldRule
     {
         // Check if the provided field type is valid
         if (!FieldType::isValidValue($type)) {

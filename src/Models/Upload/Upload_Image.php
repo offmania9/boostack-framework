@@ -23,7 +23,6 @@ const IMAGETYPE_EXTENSION = array(
     "swf" => IMAGETYPE_SWF,
     "psd" => IMAGETYPE_PSD,
     "bmp" => IMAGETYPE_BMP,
-    "tiff" => IMAGETYPE_TIFF_II,
     "tiff" => IMAGETYPE_TIFF_MM,
     "jpc" => IMAGETYPE_JPC,
     "jp2" => IMAGETYPE_JP2,
@@ -78,7 +77,7 @@ class Upload_Image
 {
     private $source;
 
-    private $name;
+    private string $name;
 
     private $visual_name;
 
@@ -88,17 +87,17 @@ class Upload_Image
 
     private $tmp_name;
 
-    private $path;
+    private string $path;
 
     private $extension;
 
-    private $height;
+    private int $height;
 
-    private $width;
+    private int $width;
 
     private $filter;
 
-    private $preview_path;
+    private string $preview_path;
 
     private $image_types = array(
         "image/gif",
@@ -126,7 +125,7 @@ class Upload_Image
      * @param int|null $filter The filter option for the image.
      * @throws \Exception If an error occurs during image upload.
      */
-    public function __construct($file, $destination_folder, $exitifexist = true, $target_name = NULL, $visual_name = NULL, $resize = NULL, $preview_size = NULL, $filter = NULL)
+    public function __construct(array $file, string $destination_folder, $exitifexist = true, $target_name = NULL, $visual_name = NULL, $resize = NULL, $preview_size = NULL, $filter = NULL)
     {
         if ($this->constraints($file)) {
             if ($file["error"] > 0) {
@@ -170,12 +169,10 @@ class Upload_Image
                         } else {
                             $this->resizeToWidth($this->width, $filter);
                         }
+                    } elseif ($this->height >= 1237) {
+                        $this->resizeToHeight(1237, $filter);
                     } else {
-                        if ($this->height >= 1237) {
-                            $this->resizeToHeight(1237, $filter);
-                        } else {
-                            $this->resizeToHeight($this->height, $filter);
-                        }
+                        $this->resizeToHeight($this->height, $filter);
                     }
                 }
                 if ($preview_size !== NULL) {
@@ -192,7 +189,7 @@ class Upload_Image
      * @return bool Returns true if the image meets the constraints, otherwise throws an \Exception.
      * @throws \Exception If the image does not meet the constraints.
      */
-    public function constraints($file)
+    public function constraints($file): bool
     {
         if (empty($file) || empty($file["name"]) || empty($file["type"])) {
             Logger::write("Unknown file name or file type.", Log_Level::WARNING);
@@ -222,7 +219,7 @@ class Upload_Image
      *
      * @return bool Returns true if the file is successfully removed, otherwise false.
      */
-    public function remove()
+    public function remove(): bool
     {
         return unlink($this->path);
     }
@@ -265,7 +262,7 @@ class Upload_Image
      * @param int $height The height to resize the image to.
      * @param mixed|null $filter The filter to use for resizing.
      */
-    function resizeToHeight($height, $filter = NULL)
+    function resizeToHeight($height, $filter = NULL): void
     {
         if ($height <= 0) {
             throw new \InvalidArgumentException("Height must be greater than 0.");
@@ -284,7 +281,7 @@ class Upload_Image
      * @param int $width The width to resize the image to.
      * @param mixed|null $filter The filter to use for resizing.
      */
-    function resizeToWidth($width, $filter = NULL)
+    function resizeToWidth($width, $filter = NULL): void
     {
         if ($width <= 0) {
             throw new \InvalidArgumentException("Width must be greater than 0.");
@@ -304,7 +301,7 @@ class Upload_Image
      * @param int $width The width to resize the image to.
      * @param mixed $filter The filter to apply during resizing.
      */
-    function previewResizeToWidth($width, $filter)
+    function previewResizeToWidth($width, $filter): void
     {
         if ($width <= 0) {
             throw new \InvalidArgumentException("Width must be greater than 0.");
@@ -322,7 +319,7 @@ class Upload_Image
      *
      * @param int $scale The percentage by which to scale the image.
      */
-    function scale($scale)
+    function scale($scale): void
     {
         $width = $this->width * $scale / 100;
         $height = $this->height * $scale / 100;
@@ -335,9 +332,8 @@ class Upload_Image
      * @param int $width The target width of the resized image.
      * @param int $height The target height of the resized image.
      * @param string|null $filter The filter to apply to the resized image (optional).
-     * @return void
      */
-    function resize($width, $height, $filter = NULL)
+    function resize($width, $height, $filter = NULL): void
     {
         // Create a new true color image resource with the specified dimensions
         $new_image = imagecreatetruecolor($width, $height);
@@ -401,9 +397,6 @@ class Upload_Image
                 imagepng($new_image, $this->path, $this->PNG_compression);
                 break;
         }
-
-        // Update the path property
-        $this->path = $this->path;
     }
 
     /**
@@ -412,9 +405,8 @@ class Upload_Image
      * @param int $width The target width of the preview image.
      * @param int $height The target height of the preview image.
      * @param string|null $filter The filter to apply to the preview image (optional).
-     * @return void
      */
-    function previewResize($width, $height, $filter = NULL)
+    function previewResize($width, $height, $filter = NULL): void
     {
         // Create a new true color image resource with the specified dimensions
         $new_image = imagecreatetruecolor($width, $height);
@@ -446,7 +438,7 @@ class Upload_Image
                 imagejpeg($new_image, $this->preview_path, 100);
                 break;
             case "image/gif":
-                imagegif($new_image, $this->preview_path, 100);
+                imagegif($new_image, $this->preview_path);
                 break;
             case "image/bmp":
                 imagewbmp($new_image, $this->preview_path, 100);
@@ -458,9 +450,6 @@ class Upload_Image
                 imagewebp($new_image, $this->path, 100);
                 break;
         }
-
-        // Update the preview_path property
-        $this->preview_path = $this->preview_path;
     }
 
 
@@ -476,7 +465,7 @@ class Upload_Image
      * @throws \RuntimeException if the image cannot be loaded or the thumbnail cannot be saved.
      * @return array Information about the created thumbnail (path, file name, extension, full path).
      */
-    public static function createThumbnail($src, $destFolder, $targetName, $targetWidth, $targetHeight = null)
+    public static function createThumbnail($src, $destFolder, string $targetName, $targetWidth, $targetHeight = null): array
     {
         // Check if the source file exists
         if (!file_exists($src)) {
@@ -606,7 +595,7 @@ class Upload_Image
      * @param string $dest The destination file location.
      * @return bool|null True on success, null on failure.
      */
-    public static function copy($src, $dest)
+    public static function copy($src, $dest): ?bool
     {
         // Get the extension of the destination file
         $ext = pathinfo($dest, PATHINFO_EXTENSION);

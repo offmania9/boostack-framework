@@ -41,7 +41,7 @@ class Message extends \Boostack\Models\BaseClassTraced
         parent::init($id);
     }
 
-    public function enqueue($queue_name, $callable, $params, $max_retries = -1)
+    public function enqueue($queue_name, $callable, $params, $max_retries = -1): void
     {
         $this->callable = serialize($callable);
         $this->params = serialize($params);

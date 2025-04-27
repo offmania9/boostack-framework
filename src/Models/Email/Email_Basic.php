@@ -43,13 +43,13 @@ class Email_Basic
     private $bcc = array();
 
     /** @var string The email headers. */
-    private $headers;
+    private string $headers;
 
     /** @var array The attachments. */
     private $attachment = array();
 
     /** @var string The message body. */
-    private $message;
+    private string $message;
 
     /** @var string The clean message body without MIME formatting. */
     private $message_clean;
@@ -61,7 +61,7 @@ class Email_Basic
     private $to_list = array();
 
     /** @var string The MIME boundary for separating message parts. */
-    private $mime_boundary;
+    private string $mime_boundary;
 
     /**
      * Email_Basic constructor.
@@ -71,39 +71,48 @@ class Email_Basic
      */
     public function __construct($options)
     {
-        if (empty($options["from_mail"])) throw new \Exception("Missing 'from_mail' parameter");
-        if (empty($options["message"])) throw new \Exception("Missing 'message' parameter");
-        if (empty($options["to"])) throw new \Exception("Missing 'to' parameter");
+        if (empty($options["from_mail"])) {
+            throw new \Exception("Missing 'from_mail' parameter");
+        }
+        if (empty($options["message"])) {
+            throw new \Exception("Missing 'message' parameter");
+        }
+        if (empty($options["to"])) {
+            throw new \Exception("Missing 'to' parameter");
+        }
 
         $this->from_mail = $options["from_mail"];
-        $this->from_name = !empty($options["from_name"]) ? $options["from_name"] : "";
-        $this->reply_to_mail = !empty($options["reply_mail"]) ? $options["reply_mail"] : "";
-        $this->reply_to_name = !empty($options["reply_name"]) ? $options["reply_name"] : "";
-        $this->subject = !empty($options["subject"]) ? $options["subject"] : "";
-        $cc = !empty($options["cc"]) ? $options["cc"] : NULL;
-        $bcc = !empty($options["bcc"]) ? $options["bcc"] : NULL;
+        $this->from_name = empty($options["from_name"]) ? "" : $options["from_name"];
+        $this->reply_to_mail = empty($options["reply_mail"]) ? "" : $options["reply_mail"];
+        $this->reply_to_name = empty($options["reply_name"]) ? "" : $options["reply_name"];
+        $this->subject = empty($options["subject"]) ? "" : $options["subject"];
+        $cc = empty($options["cc"]) ? NULL : $options["cc"];
+        $bcc = empty($options["bcc"]) ? NULL : $options["bcc"];
         $this->message_clean = $options["message"];
 
         if ($options["to"] !== NULL) {
-            if (is_array($options["to"]))
+            if (is_array($options["to"])) {
                 foreach ($options["to"] as $v)
                     $this->to_list[] = $v;
-            else
+            } else {
                 $this->to_list[] = $options["to"];
+            }
         }
         if ($cc !== NULL) {
-            if (is_array($cc))
+            if (is_array($cc)) {
                 foreach ($cc as $v)
                     $this->cc[] = $v;
-            else
+            } else {
                 $this->cc[] = $cc;
+            }
         }
         if ($bcc !== NULL) {
-            if (is_array($bcc))
+            if (is_array($bcc)) {
                 foreach ($bcc as $v)
                     $this->bcc[] = $v;
-            else
+            } else {
                 $this->bcc[] = $bcc;
+            }
         }
 
         $semi_rand = md5(time());
@@ -125,7 +134,7 @@ class Email_Basic
      *
      * @param string $emailaddress The email address to add.
      */
-    public function AddAddressToList($emailaddress)
+    public function AddAddressToList($emailaddress): void
     {
         $this->to_list[] = $emailaddress;
     }
@@ -136,7 +145,7 @@ class Email_Basic
      * @param string $path The path to the attachment file.
      * @param string $type The MIME type of the attachment.
      */
-    public function addAttachment($path, $mime_type)
+    public function addAttachment($path, string $mime_type): void
     {
         $this->attachment[] = $path;
         $data = "";
@@ -159,9 +168,8 @@ class Email_Basic
      * @param string $buffer_data The binary data of the attachment.
      * @param string $name The name of the file being attached.
      * @param string $mime_type The MIME type of the attachment (e.g., 'image/jpeg').
-     * @return void
      */
-    public function addAttachmentFromBuffer($buffer_data, $name, $mime_type)
+    public function addAttachmentFromBuffer($buffer_data, string $name, string $mime_type): void
     {
         $encoded_data = chunk_split(base64_encode($buffer_data));
 
@@ -178,7 +186,7 @@ class Email_Basic
      *
      * @return bool True if the email was sent successfully, false otherwise.
      */
-    public function Send()
+    public function Send(): bool
     {
         $this->message .= "--" . $this->mime_boundary . "--\n";
         //$this->message = wordwrap($this->message, 70, "\r\n");

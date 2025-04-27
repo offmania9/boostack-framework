@@ -16,19 +16,19 @@ use Boostack\Models\Config;
 
 class Session
 {
-    private static $objSession = null;
+    private static ?\Boostack\Models\Session\Session_HTTP $sessionHTTP = null;
 
     /**
      * Prevents direct instantiation of Session.
      */
     private function __construct() {}
 
-    public static function init()
+    public static function init(): \Boostack\Models\Session\Session_HTTP
     {
-        if (self::$objSession === null) {
-            self::$objSession = new Session_HTTP(Config::get('session_timeout'), Config::get('session_lifespan'));
+        if (!self::$sessionHTTP instanceof \Boostack\Models\Session\Session_HTTP) {
+            self::$sessionHTTP = new Session_HTTP(Config::get('session_timeout'), Config::get('session_lifespan'));
         }
-        return self::$objSession;
+        return self::$sessionHTTP;
     }
 
 
@@ -40,7 +40,7 @@ class Session
      */
     public static function get(string $key)
     {
-        return self::$objSession->$key;
+        return self::$sessionHTTP->$key;
     }
 
     /**
@@ -48,11 +48,10 @@ class Session
      *
      * @param string $key The key of the session.
      * @param mixed $value The value to set.
-     * @return void
      */
     public static function set(string $key, $value): void
     {
-        self::$objSession->$key = $value;
+        self::$sessionHTTP->$key = $value;
     }
 
     /**
@@ -60,9 +59,9 @@ class Session
      *
      * @return mixed The session object.
      */
-    public static function getObject()
+    public static function getObject(): ?\Boostack\Models\Session\Session_HTTP
     {
-        return self::$objSession;
+        return self::$sessionHTTP;
     }
 
     /**
@@ -70,10 +69,10 @@ class Session
      *
      * @return mixed The user object.
      */
-    public static function getUserObject()
+    public static function getUserObject(): ?\Boostack\Models\User\User
     {
 
-        return self::$objSession->GetUserObject();
+        return self::$sessionHTTP->GetUserObject();
     }
 
     /**
@@ -81,7 +80,7 @@ class Session
      */
     public static function getLastImpression()
     {
-        return self::$objSession->getLastImpression();
+        return self::$sessionHTTP->getLastImpression();
     }
 
     /**
@@ -92,7 +91,7 @@ class Session
     public static function getUserID()
     {
 
-        return self::$objSession->GetUserID();
+        return self::$sessionHTTP->GetUserID();
     }
 
     /**
@@ -104,7 +103,7 @@ class Session
     public static function loginUser($userID)
     {
 
-        return self::$objSession->loginUser($userID);
+        return self::$sessionHTTP->loginUser($userID);
     }
 
     /**
@@ -115,7 +114,7 @@ class Session
     public static function logoutUser()
     {
 
-        return self::$objSession->logoutUser();
+        return self::$sessionHTTP->logoutUser();
     }
 
     /**
@@ -126,7 +125,7 @@ class Session
     public static function isLoggedIn(): bool
     {
 
-        return self::$objSession->IsLoggedIn();
+        return self::$sessionHTTP->IsLoggedIn();
     }
 
     /**
@@ -139,7 +138,7 @@ class Session
     public static function CSRFCheckValidity(array $postArray, bool $throwException = true)
     {
 
-        return self::$objSession->CSRFCheckValidity($postArray, $throwException);
+        return self::$sessionHTTP->CSRFCheckValidity($postArray, $throwException);
     }
 
     /**
@@ -147,8 +146,8 @@ class Session
      *
      * @return mixed The rendered hidden CSRF field.
      */
-    public static function CSRFRenderHiddenField()
+    public static function CSRFRenderHiddenField(): string
     {
-        return self::$objSession->CSRFRenderHiddenField();
+        return self::$sessionHTTP->CSRFRenderHiddenField();
     }
 }

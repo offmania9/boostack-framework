@@ -24,7 +24,7 @@ class NotificationWebList extends BaseList
         parent::init();
     }
 
-    public function loadMyPending($num_items = 100)
+    public function loadMyPending($num_items = 100): void
     {
         $filter = array();
         $filter[] = array("status", "=", "pending");
@@ -32,7 +32,7 @@ class NotificationWebList extends BaseList
         $this->view($filter, "created_at", "desc", $num_items);
     }
 
-    public function loadMy($num_items = 100)
+    public function loadMy($num_items = 100): void
     {
         $filter = array();
         $filter[] = array("id_user_to", "=", Session::getUserID());

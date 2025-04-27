@@ -17,7 +17,7 @@ namespace Boostack\Models\Database;
 class TableHandler
 {
     /** @var \PDO The \PDO object for database connection. */
-    private $PDO;
+    private $pdo;
 
     /** @var string The name of the table. */
     private $tableName;
@@ -26,17 +26,17 @@ class TableHandler
     private $columns = [];
 
     /** @var array The array of foreign keys in the table. */
-    private $foreignKeys = [];
+    private array $foreignKeys = [];
 
     /** @var array The array of indices in the table. */
-    private $indices = [];
+    private array $indices = [];
 
     /**
      * TableHandler constructor.
      */
     public function __construct()
     {
-        $this->PDO = Database_PDO::getInstance();
+        $this->pdo = Database_PDO::getInstance();
     }
 
     /**
@@ -44,7 +44,7 @@ class TableHandler
      *
      * @param string $tableName The name of the table.
      */
-    public function setTableName($tableName)
+    public function setTableName($tableName): void
     {
         $this->tableName = $tableName;
         $this->columns = [];
@@ -58,7 +58,7 @@ class TableHandler
      * @param string $columnName The name of the column.
      * @param string $definition The definition of the column.
      */
-    public function addColumn($columnName, $definition)
+    public function addColumn($columnName, $definition): void
     {
         $this->columns[$columnName] = $definition;
     }
@@ -69,7 +69,7 @@ class TableHandler
      * @param string $columnName The name of the column.
      * @param string $indexType The type of the index (e.g., 'INDEX', 'UNIQUE', 'PRIMARY KEY').
      */
-    public function addIndex($columnName, $indexType = 'INDEX')
+    public function addIndex($columnName, $indexType = 'INDEX'): void
     {
         $this->indices[] = [
             'column' => $columnName,
@@ -86,7 +86,7 @@ class TableHandler
      * @param string $onDelete The action on delete (default is 'CASCADE').
      * @param string $onUpdate The action on update (default is 'CASCADE').
      */
-    public function addForeignKey($columnName, $referencedTable, $referencedColumn, $onDelete = 'CASCADE', $onUpdate = 'CASCADE')
+    public function addForeignKey($columnName, $referencedTable, $referencedColumn, $onDelete = 'CASCADE', $onUpdate = 'CASCADE'): void
     {
         $this->foreignKeys[] = [
             'column' => $columnName,
@@ -100,7 +100,7 @@ class TableHandler
     /**
      * Create the table in the database.
      */
-    public function createTable()
+    public function createTable(): void
     {
         if (empty($this->tableName) || empty($this->columns)) {
             die("Table name and columns must be set before creating the table.");
@@ -112,17 +112,13 @@ class TableHandler
         }
 
         $foreignKeysString = '';
-        foreach ($this->foreignKeys as $fk) {
-            $foreignKeysString .= "FOREIGN KEY (`{$fk['column']}`) REFERENCES `{$fk['referenced_table']}`(`{$fk['referenced_column']}`) ON DELETE {$fk['on_delete']} ON UPDATE {$fk['on_update']}, ";
+        foreach ($this->foreignKeys as $foreignKey) {
+            $foreignKeysString .= "FOREIGN KEY (`{$foreignKey['column']}`) REFERENCES `{$foreignKey['referenced_table']}`(`{$foreignKey['referenced_column']}`) ON DELETE {$foreignKey['on_delete']} ON UPDATE {$foreignKey['on_update']}, ";
         }
 
         $indicesString = '';
         foreach ($this->indices as $index) {
-            if ($index['type'] == 'PRIMARY KEY') {
-                $indicesString .= "{$index['type']} (`{$index['column']}`), ";
-            } else {
-                $indicesString .= "{$index['type']} (`{$index['column']}`), ";
-            }
+            $indicesString .= "{$index['type']} (`{$index['column']}`), ";
         }
 
         $columnsString = rtrim($columnsString . $foreignKeysString . $indicesString, ', ');
@@ -130,7 +126,7 @@ class TableHandler
         $sql = "CREATE TABLE IF NOT EXISTS `{$this->tableName}` ($columnsString)";
 
         try {
-            $this->PDO->exec($sql);
+            $this->pdo->exec($sql);
             echo "Table '{$this->tableName}' created successfully.<br>";
         } catch (\PDOException $e) {
             die("Table creation failed: " . $e->getMessage());
@@ -140,7 +136,7 @@ class TableHandler
     /**
      * Reset the table handler, clearing table name, columns, and foreign keys.
      */
-    public function reset()
+    public function reset(): void
     {
         $this->tableName = null;
         $this->columns = [];
@@ -153,11 +149,11 @@ class TableHandler
      *
      * @param string $tableName The name of the table to drop.
      */
-    public function dropTable($tableName)
+    public function dropTable($tableName): void
     {
         $sql = "DROP TABLE IF EXISTS `$tableName`";
         try {
-            $this->PDO->exec($sql);
+            $this->pdo->exec($sql);
             echo "Table '$tableName' dropped successfully.<br>";
         } catch (\PDOException $e) {
             die("Failed to drop table '$tableName': " . $e->getMessage());
@@ -167,11 +163,11 @@ class TableHandler
     /**
      * Drop all tables from the database.
      */
-    public function dropAllTables()
+    public function dropAllTables(): void
     {
         $sql = "SHOW TABLES";
         try {
-            $stmt = $this->PDO->query($sql);
+            $stmt = $this->pdo->query($sql);
             $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
             foreach ($tables as $table) {
@@ -189,7 +185,7 @@ class TableHandler
      * @param string $namespace The namespace for the class (e.g., "My\Models\[NomeClasse]").
      * @param string $className The name of the class (e.g., "[NomeClasse]").
      */
-    public function generateClassFile($namespace, $className)
+    public function generateClassFile($namespace, $className): void
     {
         $classContent = $this->generateClassContent($namespace, $className);
         $filePath = $_SERVER['DOCUMENT_ROOT'] . "/My/Models/$className.php";
@@ -205,7 +201,7 @@ class TableHandler
      * @param string $className The name of the class (e.g., "[NomeClasse]").
      * @return string The PHP class content.
      */
-    private function generateClassContent($namespace, $className)
+    private function generateClassContent($namespace, $className): string
     {
         $classContent = "<?php\n\n";
         $classContent .= "namespace $namespace;\n\n";
@@ -235,9 +231,7 @@ class TableHandler
         $classContent .= "        parent::init(\$id);\n";
         $classContent .= "    }\n";
 
-        $classContent .= "}\n";
-
-        return $classContent;
+        return $classContent . "}\n";
     }
 
     /**
@@ -245,12 +239,12 @@ class TableHandler
      *
      * @return bool True if all traced columns are present, false otherwise.
      */
-    private function tableContainsTracedColumns()
+    private function tableContainsTracedColumns(): bool
     {
         $tracedColumns = ['created_at', 'last_update', 'last_access', 'deleted_at'];
         $columnNames = array_keys($this->columns);
         $missingColumns = array_diff($tracedColumns, $columnNames);
-        return empty($missingColumns);
+        return $missingColumns === [];
     }
 
     /**
@@ -259,7 +253,7 @@ class TableHandler
      *
      * @return string The property declarations and default values.
      */
-    private function generatePropertiesAndDefaults()
+    private function generatePropertiesAndDefaults(): string
     {
         $properties = "";
 
@@ -275,22 +269,20 @@ class TableHandler
         foreach ($this->columns as $columnName => $definition) {
             // Exclude standard columns
             if (!in_array($columnName, ['id', 'created_at', 'last_update', 'last_access', 'deleted_at'])) {
-                $defaultValue = $this->getDefaultForColumn($columnName, $definition);
+                $defaultValue = $this->getDefaultForColumn($definition);
                 $properties .= "        \"$columnName\" => $defaultValue,\n";
             }
         }
-        $properties .= "    ];\n";
-        return $properties;
+        return $properties . "    ];\n";
     }
 
     /**
      * Get the default value for a column based on its definition.
      *
-     * @param string $columnName The name of the column.
      * @param string $columnDefinition The definition of the column from the database.
      * @return string The PHP representation of the default value for the column.
      */
-    private function getDefaultForColumn($columnName, $columnDefinition)
+    private function getDefaultForColumn($columnDefinition)
     {
         // Extract the default value from the column definition
         if (preg_match("/DEFAULT\s+([^\s,]+)/i", $columnDefinition, $matches)) {
@@ -321,17 +313,15 @@ class TableHandler
             return 0;
         } elseif (preg_match('/char|varchar|text|blob|binary|enum|set/i', $columnDefinition)) {
             // Specific handling for SET type
-            if (preg_match('/set/i', $columnDefinition)) {
-                // Extract possible values from the SET definition
-                if (preg_match("/set\s*\((.*?)\)/i", $columnDefinition, $setMatches)) {
-                    $setValues = explode(',', $setMatches[1]);
-                    // Trim and remove quotes from each value
-                    $setValues = array_map(function ($value) {
-                        return trim($value, " '\"");
-                    }, $setValues);
-                    // Return the first value as the default
-                    return "'" . $setValues[0] . "'";
-                }
+            // Extract possible values from the SET definition
+            if (preg_match('/set/i', $columnDefinition) && preg_match("/set\s*\((.*?)\)/i", $columnDefinition, $setMatches)) {
+                $setValues = explode(',', $setMatches[1]);
+                // Trim and remove quotes from each value
+                $setValues = array_map(function ($value): string {
+                    return trim($value, " '\"");
+                }, $setValues);
+                // Return the first value as the default
+                return "'" . $setValues[0] . "'";
             }
             return "''";
         } elseif (preg_match('/date|time|year|timestamp|datetime/i', $columnDefinition)) {
@@ -349,15 +339,16 @@ class TableHandler
      * @param string $className The name of the class (e.g., "[NomeClasse]").
      * @param string $namespace The namespace for the class (default is "My\Models").
      */
-    public function generateClassFileFromDatabase($className, $namespace = "My\Models")
+    public function generateClassFileFromDatabase($className, $namespace = "My\Models"): void
     {
         // Fetch columns from the database table
         $columns = $this->fetchTableColumns();
 
         // Set table name and columns in the TableHandler instance
         $this->setTableName($this->tableName); // Ensure table name is set
-        if (count($this->columns) == 0)
+        if (count($this->columns) == 0) {
             $this->columns = $columns;
+        }
         // Generate and save the PHP class file
         $classContent = $this->generateClassContent($namespace, $className);
         $filePath = $this->getClassFilePath($namespace, $className);
@@ -372,7 +363,7 @@ class TableHandler
      * @param string $className The name of the main class (e.g., "[NomeClasse]").
      * @param string $namespace The namespace for the list class (default is "My\Models").
      */
-    public function generateListClassFile($className, $namespace = "My\Models")
+    public function generateListClassFile(string $className, $namespace = "My\Models"): void
     {
         $listClassName = $className . "List";
         $classContent = $this->generateListClassContent($namespace, $className, $listClassName);
@@ -389,7 +380,7 @@ class TableHandler
      * @param string $className The name of the class (e.g., "[NomeClasse]").
      * @return string The full path to the PHP class file.
      */
-    private function getClassFilePath($namespace, $className)
+    private function getClassFilePath($namespace, $className): string
     {
         $basePath = $_SERVER['DOCUMENT_ROOT'] . "/";
         $classPath = str_replace('\\', '/', $namespace); // Convert namespace to directory path
@@ -405,7 +396,7 @@ class TableHandler
     {
         $sql = "SHOW COLUMNS FROM `{$this->tableName}`";
         try {
-            $stmt = $this->PDO->query($sql);
+            $stmt = $this->pdo->query($sql);
             $columns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             $tableColumns = [];
@@ -413,7 +404,7 @@ class TableHandler
                 $columnName = $column['Field'];
                 $columnType = $column['Type'];
                 // Exclude standard columns if needed (id, created_at, etc.)
-                if (!in_array($columnName, ['id'])) { //, 'created_at', 'last_update', 'last_access', 'deleted_at'
+                if ($columnName != 'id') { //, 'created_at', 'last_update', 'last_access', 'deleted_at'
                     $tableColumns[$columnName] = $columnType;
                 }
             }
@@ -433,7 +424,7 @@ class TableHandler
      * @return string The PHP class content for the list class.
      */
 
-    private function generateListClassContent($namespace, $className, $listClassName)
+    private function generateListClassContent($namespace, string $className, string $listClassName): string
     {
         $classContent = "<?php\n\n";
         $classContent .= "namespace $namespace;\n\n";
@@ -446,8 +437,7 @@ class TableHandler
         $classContent .= "    {\n";
         $classContent .= "        parent::init();\n";
         $classContent .= "    }\n";
-        $classContent .= "}\n";
 
-        return $classContent;
+        return $classContent . "}\n";
     }
 }

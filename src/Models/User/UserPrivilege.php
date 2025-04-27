@@ -29,8 +29,6 @@ class UserPrivilege
     /**
      * Returns the name of the constant corresponding to the given value.
      *
-     * @param int $value
-     * @return string
      * @throws \InvalidArgumentException If the value does not correspond to any constant
      */
     public static function getConstantName(int $value): string

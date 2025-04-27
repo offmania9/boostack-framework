@@ -28,7 +28,7 @@ class User_ApiJWTTokenList extends \Boostack\Models\BaseList
      *
      * @return array An array containing items associated with the user and the total count.
      */
-    public function getMy()
+    public function getMy(): array
     {
         parent::clear();
         return self::getByUser(Auth::getUserLoggedObject()->id);
@@ -40,7 +40,7 @@ class User_ApiJWTTokenList extends \Boostack\Models\BaseList
      * @param int $id_user The ID of the user.
      * @return array An array containing items associated with the user and the total count.
      */
-    public function getByUser(int $id_user)
+    public function getByUser(int $id_user): array
     {
         $filter = array();
         $filter[] = array("id_user", "=", $id_user);
@@ -53,7 +53,7 @@ class User_ApiJWTTokenList extends \Boostack\Models\BaseList
      *
      * @param int|null $timestamp_from_revoke The timestamp from which to revoke the items.
      */
-    public function revokeAll(int $timestamp_from_revoke = null)
+    public function revokeAll(int $timestamp_from_revoke = null): void
     {
         if (count($this->items) > 0) {
             foreach ($this->items as $item) {

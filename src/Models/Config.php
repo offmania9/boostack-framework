@@ -2,7 +2,7 @@
 
 namespace Boostack\Models;
 
-use Boostack\Exception\Exception_Misconfiguration;
+use Boostack\Exceptions\Exception_Misconfiguration;
 
 /**
  * Boostack: Config.php
@@ -22,7 +22,7 @@ class Config
      *
      * @var mixed|null
      */
-    private static $configs = NULL;
+    private static $configs;
 
     /**
      * Prevents direct instantiation of Config.
@@ -54,11 +54,11 @@ class Config
     /**
      * Initializes the configuration settings from custom environment Relative path (used for running timerjob outside document root).
      */
-    public static function initFromFile($envRelativePath = "")
+    public static function initFromFile(?string $envRelativePath = "")
     {
-        if ($envRelativePath == "")
+        if ($envRelativePath == "") {
             self::init();
-        else {
+        } else {
             $envAbsolutePath = $envRelativePath . "/config/env/env.php";
             $envPath = realpath($envAbsolutePath);
             if (file_exists($envPath)) {
@@ -71,6 +71,7 @@ class Config
                 exit();
             }
         }
+        return null;
     }
 
     /**
@@ -80,7 +81,7 @@ class Config
      * @return mixed The value of the configuration attribute.
      * @throws \Exception_Misconfiguration If the configuration attribute is not found.
      */
-    public static function get($configKey)
+    public static function get(string $configKey)
     {
         if (self::$configs === null) {
             self::$configs = self::init();
@@ -106,10 +107,12 @@ class Config
      * @return bool True if the constraint is met, false otherwise.
      * @throws \Exception_Misconfiguration If the configuration attribute is not found or does not meet the constraint.
      */
-    public static function constraint($configKey, $configvalue = true)
+    public static function constraint(string $configKey, $configvalue = true): bool
     {
         $actual = self::get($configKey);
-        if ($actual == $configvalue) return true;
+        if ($actual == $configvalue) {
+            return true;
+        }
 
         throw new Exception_Misconfiguration("You must enable '" . $configKey . "' configuration attribute in config/env.php file");
     }
@@ -121,7 +124,7 @@ class Config
      * @param string $configValue The value of the configuration attribute.
      * @throws \Exception_Misconfiguration If the configuration attribute is not found.
      */
-    public static function set($configKey, $configValue)
+    public static function set($configKey, $configValue): void
     {
         self::$configs[$configKey] = $configValue;
     }

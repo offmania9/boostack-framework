@@ -9,7 +9,7 @@ use Boostack\Models\Database\Database_PDO;
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
  * @version 6.0
  */
-function textescaping($text, $minlenght, $maxlenght, $newlinereplace)
+function textescaping($text, $minlenght, $maxlenght, $newlinereplace): string
 {
     $text = trim($text);
     $text = substr($text, 0, $maxlenght);
@@ -19,11 +19,10 @@ function textescaping($text, $minlenght, $maxlenght, $newlinereplace)
         "\n",
         "\r"
     ), $newlinereplace, $text);
-    $text = addslashes($text);
-    return $text;
+    return addslashes($text);
 }
 
-function datetime_format_string_to_sqlformat($string_with_slash)
+function datetime_format_string_to_sqlformat($string_with_slash): string
 {
     $array_data = explode("/", $string_with_slash);
     return $array_data[2] . "-" . $array_data[1] . "-" . $array_data[0];
@@ -35,7 +34,7 @@ function datetime_format_string_to_sqlformat($string_with_slash)
  * @param string $datetime_sql Datetime string in SQL format (yyyy-mm-dd).
  * @return string Formatted datetime string in slashed format (dd/mm/yyyy).
  */
-function datetime_format_string_to_slashedformat($datetime_sql)
+function datetime_format_string_to_slashedformat($datetime_sql): string
 {
     // Split the datetime string into an array using "-" as the delimiter
     $array_data = explode("-", $datetime_sql);
@@ -51,7 +50,7 @@ function datetime_format_string_to_slashedformat($datetime_sql)
  * @param string $date_sql Date string in SQL format (yyyy-mm-dd).
  * @return string Formatted date string in slashed format (dd/mm/yyyy).
  */
-function date_format_string_to_slashedformat($date_sql)
+function date_format_string_to_slashedformat($date_sql): string
 {
     $array_data = explode("-", $date_sql);
     return $array_data[2] . "/" . $array_data[1] . "/" . $array_data[0];
@@ -102,7 +101,7 @@ function getTimeN()
  *
  * @return int The month of the current date.
  */
-function getDateN_Month()
+function getDateN_Month(): int
 {
     $date = getDateN();
     return (int) explode("-", $date)[1];
@@ -113,7 +112,7 @@ function getDateN_Month()
  *
  * @return int The day of the current date.
  */
-function getDateN_Day()
+function getDateN_Day(): int
 {
     $date = getDateN();
     return (int) explode("-", $date)[2];
@@ -124,7 +123,7 @@ function getDateN_Day()
  *
  * @return int The year of the current date.
  */
-function getDateN_Year()
+function getDateN_Year(): int
 {
     $date = getDateN();
     return (int) explode("-", $date)[0];
@@ -151,9 +150,7 @@ function getDateTimeTimestamp($datetime_sql)
     if (!checkdate($month, $day, $year) || $hour < 0 || $hour > 23 || $minute < 0 || $minute > 59 || $second < 0 || $second > 59) {
         return false; // Invalid datetime components
     }
-
-    $timestamp = mktime($hour, $minute, $second, $month, $day, $year);
-    return $timestamp;
+    return mktime($hour, $minute, $second, $month, $day, $year);
 }
 /**
  * Get the elapsed time since the specified datetime timestamp.
@@ -161,7 +158,7 @@ function getDateTimeTimestamp($datetime_sql)
  * @param int $datetime_timestamp The datetime timestamp.
  * @return string The elapsed time formatted as a human-readable string.
  */
-function getElapsedTime($datetime_timestamp)
+function getElapsedTime($datetime_timestamp): string
 {
     $current_timestamp = time();
     $elapsed_time = $current_timestamp - $datetime_timestamp;

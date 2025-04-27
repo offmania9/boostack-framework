@@ -61,10 +61,10 @@ class Notification extends BaseClassTraced
                 if (empty($this->message_content)) {
                     throw new \Exception("Notification Web Error: message_content is empty. Use Notification setMessageContent function");
                 }
-                foreach ($to_user_ids as $id_user_to) {
+                foreach ($to_user_ids as $to_user_id) {
                     $not = new NotificationWeb();
                     $not->id_notification = $this->id;
-                    $not->id_user_to = $id_user_to;
+                    $not->id_user_to = $to_user_id;
                     $not->status = 'pending';
                     $not->json_object = $this->json_object;
                     $not->message_content = $this->message_content;
@@ -75,11 +75,11 @@ class Notification extends BaseClassTraced
                 if (empty($this->email_content)) {
                     throw new \Exception("Notification Web Error: email_content is empty. Use Notification setEmailContent function");
                 }
-                foreach ($to_user_ids as $id_user_to) {
-                    $user = new \Boostack\Models\User\User($id_user_to);
+                foreach ($to_user_ids as $to_user_id) {
+                    $user = new \Boostack\Models\User\User($to_user_id);
                     $not = new NotificationEmail();
                     $not->id_notification = $this->id;
-                    $not->id_user_to = $id_user_to;
+                    $not->id_user_to = $to_user_id;
                     $not->email_to = $user->email;
                     $not->status = 'pending';
                     $not->json_object = $this->json_object;

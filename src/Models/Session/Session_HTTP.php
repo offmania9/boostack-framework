@@ -2,7 +2,7 @@
 
 namespace Boostack\Models\Session;
 
-use Boostack\Exception\Exception_TooManyRequests;
+use Boostack\Exceptions\Exception_TooManyRequests;
 use Boostack\Models\Database\Database_PDO;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Logger;
@@ -69,7 +69,7 @@ class Session_HTTP
         $this->session_lifespan = $lifespan;
 
         // Set session save handler
-        $set_save_handler = session_set_save_handler(
+        session_set_save_handler(
             array($this, '_session_open_method'),
             array($this, '_session_close_method'),
             array($this, '_session_read_method'),
@@ -148,12 +148,8 @@ class Session_HTTP
 
     /**
      * Method for session open.
-     *
-     * @param string $save_path
-     * @param string $session_name
-     * @return bool
      */
-    private function _session_open_method($save_path, $session_name)
+    private function _session_open_method(): bool
     {
         return true;
     }
@@ -161,10 +157,8 @@ class Session_HTTP
 
     /**
      * Method for session close.
-     *
-     * @return bool
      */
-    public function _session_close_method()
+    public function _session_close_method(): bool
     {
         // Close the database connection
         $this->dbhandle = NULL;
@@ -175,9 +169,8 @@ class Session_HTTP
      * Method for session read.
      *
      * @param string $id
-     * @return string
      */
-    public function _session_read_method($id)
+    public function _session_read_method($id): string
     {
         // Set the PHP session ID
         $this->php_session_id = $id;
@@ -196,8 +189,9 @@ class Session_HTTP
 
             $timeLastRequest = $this->last_impression;
             $secondsAccepted = Config::get("seconds_accepted_between_requests");
-            if ($timeLastRequest === null || ($timeLastRequest !== 0 && time() - $timeLastRequest < $secondsAccepted))
+            if ($timeLastRequest === null || ($timeLastRequest !== 0 && time() - $timeLastRequest < $secondsAccepted)) {
                 throw new Exception_TooManyRequests("Too many requests. Please wait a few seconds.");
+            }
 
             if ($row["logged_in"] == "t") {
                 $this->logged_in = true;
@@ -235,7 +229,7 @@ class Session_HTTP
     /**
      * Method to update session impression time.
      */
-    public function Impress()
+    public function Impress(): void
     {
         // Update last impression time if session ID is set
         if ($this->native_session_id) {
@@ -275,10 +269,8 @@ class Session_HTTP
 
     /**
      * Get the User object of the logged-in user.
-     *
-     * @return User|null
      */
-    public function GetUserObject()
+    public function GetUserObject(): ?\Boostack\Models\User\User
     {
         if ($this->logged_in && class_exists("\Boostack\Models\User\User_Entity")) {
             return new User($this->user_id);
@@ -313,10 +305,8 @@ class Session_HTTP
 
     /**
      * Logout the user.
-     *
-     * @return bool
      */
-    public function logoutUser()
+    public function logoutUser(): bool
     {
         $sql = "UPDATE " . $this->http_session_table . " SET logged_in = :logged_in, user_id = :user_id WHERE id = :native_session_id";
         $q = $this->dbhandle->prepare($sql);
@@ -334,7 +324,7 @@ class Session_HTTP
      *
      * @param $userID
      */
-    public function loginUser($userID)
+    public function loginUser($userID): void
     {
         $this->user_id = $userID;
         $this->logged_in = true;
@@ -406,7 +396,7 @@ class Session_HTTP
      * @param mixed $sess_data The session data.
      * @return bool Returns true as a placeholder for successful session data writing.
      */
-    public function _session_write_method($id, $sess_data)
+    public function _session_write_method($id, $sess_data): bool
     {
         return true;
     }
@@ -417,16 +407,13 @@ class Session_HTTP
      * @param mixed $id The session ID.
      * @return bool Returns true if the session was successfully destroyed, false otherwise.
      */
-    private function _session_destroy_method($id)
+    private function _session_destroy_method($id): bool
     {
         $sql = "DELETE FROM " . $this->http_session_table . " WHERE ascii_session_id = :ascii_session_id";
         $q = $this->dbhandle->prepare($sql);
         $q->bindValue(':ascii_session_id', $id);
         $q->execute();
-        if ($q->execute()) {
-            return true;
-        }
-        return false;
+        return $q->execute();
     }
 
 
@@ -435,9 +422,8 @@ class Session_HTTP
      * Method invoked automatically by PHP's Garbage Collector.
      *
      * @param $maxlifetime auto-injected by PHP config
-     * @return bool
      */
-    private function _session_gc_method($maxlifetime)
+    private function _session_gc_method(): bool
     {
         return true;
         //        $old = time() - $maxlifetime;
@@ -452,10 +438,8 @@ class Session_HTTP
 
     /**
      * Render a hidden field containing the CSRF token.
-     *
-     * @return string
      */
-    public function CSRFRenderHiddenField()
+    public function CSRFRenderHiddenField(): string
     {
         return "<input type=\"hidden\" name=\"" . $this->CSRFDefaultKey . "\" id=\"" . $this->CSRFDefaultKey . "\"  class=\"CSRFcheck\" value=\"" . self::CSRFTokenGenerator() . "\"/>";
     }
@@ -491,27 +475,26 @@ class Session_HTTP
         $key = $this->CSRFDefaultKey;
         if ($this->$key == null) {
             $token = base64_encode(Utils::getSecureRandomString(32) . self::getRequestInfo() . time());
-            $this->$key = $token; // store in session
-        } else {
-            if (Auth::isLoggedIn()) {
-                $timespan = Config::get("csrf_timeout");
-                $decodedToken = base64_decode($this->$key);
-                $decodedToken_timestamp = intval(substr($decodedToken, -10));
-                // check token validity, if expired, generate a new one
-                if ($decodedToken_timestamp + $timespan < time())
-                    $this->CSRFTokenInvalidation();
-            } else
+            $this->$key = $token;
+            // store in session
+        } elseif (Auth::isLoggedIn()) {
+            $timespan = Config::get("csrf_timeout");
+            $decodedToken = base64_decode($this->$key);
+            $decodedToken_timestamp = intval(substr($decodedToken, -10));
+            // check token validity, if expired, generate a new one
+            if ($decodedToken_timestamp + $timespan < time()) {
                 $this->CSRFTokenInvalidation();
+            }
+        } else {
+            $this->CSRFTokenInvalidation();
         }
         return $this->$key;
     }
 
     /**
      * Get request information.
-     *
-     * @return string
      */
-    protected static function getRequestInfo()
+    protected static function getRequestInfo(): string
     {
         return sha1(Request::sanitizeInput(Request::getIpAddress() . Request::getUserAgent()));
     }
@@ -521,10 +504,9 @@ class Session_HTTP
      *
      * @param $postArray
      * @param bool $throwException
-     * @return bool
      * @throws \Exception
      */
-    protected function CSRFCheckTokenValidity($postArray, $throwException = true)
+    protected function CSRFCheckTokenValidity($postArray, $throwException = true): bool
     {
         $timespan = Config::get("csrf_timeout");
         $key = $this->CSRFDefaultKey; // get token value from dbsession
@@ -532,18 +514,20 @@ class Session_HTTP
 
         if ($sessionToken == "") {
             Logger::write('Attention! Missing CSRF session token.', Log_Level::USER, Log_Driver::FILE);
-            if ($throwException)
+            if ($throwException) {
                 throw new \Exception('Attention! Missing CSRF session token.');
-            else
+            } else {
                 return false;
+            }
         }
 
         if (!isset($postArray[$key])) {
             Logger::write('Attention! Missing CSRF form token.', Log_Level::USER, Log_Driver::FILE);
-            if ($throwException)
+            if ($throwException) {
                 throw new \Exception('Attention! Missing CSRF form token.');
-            else
+            } else {
                 return false;
+            }
         }
 
         if ($postArray[$key] !== $sessionToken) {
@@ -563,18 +547,19 @@ class Session_HTTP
 
         if (self::getRequestInfo() !== $decodedToken_requestInfo) {
             Logger::write("Attention! Form request infos don\'t match token request infos.", Log_Level::USER, Log_Driver::FILE);
-            if ($throwException)
+            if ($throwException) {
                 throw new \Exception('Attention! Form request infos don\'t match token request infos.');
-            else
+            } else {
                 return false;
+            }
         }
 
         if ($timespan !== null && is_int($timespan) && $decodedToken_timestamp + $timespan < time()) {
             d(self::getRequestInfo(), $decodedToken_requestInfo, "rre");
             Logger::write("Attention! CSRF token has expired.", Log_Level::USER, Log_Driver::FILE);
-            if ($throwException)
+            if ($throwException) {
                 throw new \Exception('Attention! CSRF token has expired.');
-            else {
+            } else {
                 $this->CSRFTokenInvalidation();
                 return false;
             }
@@ -604,16 +589,15 @@ class Session_HTTP
      *
      * @param $postArray
      * @param bool $throwException
-     * @return bool
      * @throws \Exception
      */
-    public function CSRFCheckValidity($postArray, $throwException = true)
+    public function CSRFCheckValidity($postArray, $throwException = true): bool
     {
         try {
             return $this->CSRFCheckTokenValidity($postArray, $throwException);
         } catch (\Exception $e) {
             Logger::write('Session_CSRF -> CSRFCheckValidity -> Caught \Exception: ' . $e->getMessage() . $e->getTraceAsString(), Log_Level::ERROR);
-            throw new \Exception('Invalid CSRF token' . $e->getMessage());
+            throw new \Exception('Invalid CSRF token' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 }

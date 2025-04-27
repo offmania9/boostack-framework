@@ -33,7 +33,7 @@ class Upload_File
      * @param array $file The $_FILES array representing the uploaded file.
      * @throws \Exception If an error occurs during file upload.
      */
-    public function __construct($file)
+    public function __construct(array $file)
     {
         if ($file["error"] != UPLOAD_ERR_OK) {
             throw new \Exception("Error during file upload. Error code: " . $file["error"] . ". Error message: " . $this->errorCodeToMessage($file["error"]));
@@ -52,7 +52,7 @@ class Upload_File
      * @return bool Returns true if the file meets the constraints, otherwise throws an \Exception.
      * @throws \Exception If the file does not meet the constraints.
      */
-    public function constraints()
+    public function constraints(): bool
     {
         if ($this->size > Config::get("max_upload_filesize")) {
             throw new \Exception("File exceeds the maximum size");
@@ -81,7 +81,7 @@ class Upload_File
      * @param bool $overwriteIfExist Whether to overwrite the file if it already exists.
      * @throws \Exception If an error occurs during the file move operation.
      */
-    public function store($path, $filename, $overwriteIfExist = false, $permission = 0755)
+    public function store(string $path, string $filename, $overwriteIfExist = false, $permission = 0755): void
     {
         $destinationFullPath = $path . $filename . "." . $this->extension;
         if (!$overwriteIfExist && file_exists($destinationFullPath)) {
@@ -107,7 +107,7 @@ class Upload_File
      * @param bool $overwriteIfExist Whether to overwrite the file if it already exists.
      * @throws \Exception If an error occurs during the file rename operation.
      */
-    public function rename($currentFileName, $newFileName, $overwriteIfExist = false)
+    public function rename(string $currentFileName, string $newFileName, $overwriteIfExist = false): void
     {
         if (!file_exists($currentFileName)) {
             throw new \Exception("File " . $currentFileName . " does not exist.");
@@ -116,10 +116,8 @@ class Upload_File
         if (file_exists($newFileName)) {
             if (!$overwriteIfExist) {
                 throw new \Exception("File " . $newFileName . " already exists.");
-            } else {
-                if (!unlink($newFileName)) {
-                    throw new \Exception("Failed to overwrite existing file " . $newFileName . ".");
-                }
+            } elseif (!unlink($newFileName)) {
+                throw new \Exception("Failed to overwrite existing file " . $newFileName . ".");
             }
         }
 
@@ -135,7 +133,7 @@ class Upload_File
      * @param int $code The error code.
      * @return string The error message.
      */
-    private function errorCodeToMessage($code)
+    private function errorCodeToMessage($code): string
     {
         switch ($code) {
             case UPLOAD_ERR_INI_SIZE:

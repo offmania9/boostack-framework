@@ -24,21 +24,21 @@ abstract class Rest_ApiAbstract
 
     protected $method = '';
 
-    protected $endpoint = '';
+    protected string $endpoint;
 
-    protected $verb = '';
+    protected string $verb = '';
 
     protected $args = array();
 
     protected $content_type = "";
 
-    protected $request = null;
+    protected $request;
 
-    protected $file = null;
+    protected $file;
 
-    protected $messageBag = null;
+    protected \Boostack\Models\MessageBag $messageBag;
 
-    protected $apiRequest = null;
+    protected \Boostack\Models\Rest\Rest_ApiRequest $apiRequest;
 
     /**
      * Constructor for the Rest_Api_Abstract class.
@@ -104,8 +104,8 @@ abstract class Rest_ApiAbstract
     public function processAPI()
     {
         try {
-            if (!Request::checkAcceptedTimeFromLastRequest(Auth::getLastTry())) {
-                throw new \Boostack\Exception\Exception_APITooManyRequests("Too many requests. Please wait a few seconds.");
+            if (!Request::checkAcceptedTimeFromLastRequest()) {
+                throw new \Boostack\Exceptions\Exception_APITooManyRequests("Too many requests. Please wait a few seconds.");
             }
 
             $methodBindings = [];
@@ -117,7 +117,7 @@ abstract class Rest_ApiAbstract
         
             foreach ($declaredClasses as $class) {
                 $classReflection = new \ReflectionClass($namespace.$class);
-                if ($classReflection->isSubclassOf("\Boostack\Models\Rest\\".'Rest_ApiAbstract')) {
+                if ($classReflection->isSubclassOf('\Boostack\Models\Rest\Rest_ApiAbstract')) {
                     $subclasses[] = $class;
                 }
             }
@@ -138,11 +138,11 @@ abstract class Rest_ApiAbstract
                 $this->messageBag->data = $classInstance->{$this->endpoint}($this->args);
                 $this->messageBag->code = StatusCodes::HTTP_OK;
             } else {
-                throw new \Boostack\Exception\Exception_APINotFound("No Endpoint: " . $this->endpoint . ". The resource you requested doesn't exist. For more info, please refer to the documentation.");
+                throw new \Boostack\Exceptions\Exception_APINotFound("No Endpoint: " . $this->endpoint . ". The resource you requested doesn't exist. For more info, please refer to the documentation.");
             }
-        } catch (\Boostack\Exception\Exception_APITooManyRequests $e) {
+        } catch (\Boostack\Exceptions\Exception_APITooManyRequests $e) {
             $this->_setErrorMessageObject("API Too many requests", StatusCodes::HTTP_TOO_MANY_REQUEST, $e->getMessage());
-        } catch (\Boostack\Exception\Exception_APINotFound $e) {
+        } catch (\Boostack\Exceptions\Exception_APINotFound $e) {
             $this->_setErrorMessageObject("API not found", StatusCodes::HTTP_NOT_FOUND, $e->getMessage());
         } catch (\Exception $e) {
             $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
@@ -162,9 +162,8 @@ abstract class Rest_ApiAbstract
      *
      * @param $message
      * @param $code
-     * @param null $data
      */
-    private function _setErrorMessageObject($message, $code, $data = null)
+    private function _setErrorMessageObject(string $message, int $code, $data = null): void
     {
         $this->messageBag->error = true;
         $this->messageBag->code = $code;
@@ -175,7 +174,7 @@ abstract class Rest_ApiAbstract
     /**
      * Track the API request details.
      */
-    private function trackRequest()
+    private function trackRequest(): void
     {
         $this->apiRequest->method = $this->method;
         $this->apiRequest->endpoint = $this->endpoint;
@@ -189,20 +188,13 @@ abstract class Rest_ApiAbstract
         $this->apiRequest->code = $this->messageBag->code;
         $this->apiRequest->message = $this->messageBag->message;
 
-        if (static::$outputNoLogged) {
-            $this->apiRequest->output = "no-logged";
-        } else {
-            $this->apiRequest->output = json_encode($this->messageBag->data);
-        }
+        $this->apiRequest->output = static::$outputNoLogged ? "no-logged" : json_encode($this->messageBag->data);
     }
 
     /**
      * Apply constraints on the API method.
      *
      * @param $method
-     * @param array|null $serverParams
-     * @param array|null $headers
-     * @param bool $fileIsJSON
      * @throws \Exception
      */
     protected function constraints($method, $currentUserIsLogged = false, ?array $headers = null, ?array $serverParams = null, bool $fileIsJSON = true)
@@ -215,7 +207,7 @@ abstract class Rest_ApiAbstract
             throw new \Exception("Only accepts requests from already logged in user.");
         }
 
-        if (!empty($serverParams)) {
+        if ($serverParams !== null && $serverParams !== []) {
             foreach ($serverParams as $key => $value) {
                 if (!Request::hasServerParam($key)) {
                     throw new \Exception("Server param '$key' must be set.");
@@ -231,7 +223,7 @@ abstract class Rest_ApiAbstract
             }
         }
 
-        if (!empty($headers)) {
+        if ($headers !== null && $headers !== []) {
             foreach ($headers as $key => $value) {
                 if ($key == "Content-Type") {
                     if (!Request::hasServerParam("CONTENT_TYPE")) {
@@ -260,10 +252,8 @@ abstract class Rest_ApiAbstract
             }
         }
 
-        if ($fileIsJSON) {
-            if (!empty($this->file) && !Utils::isJson($this->file)) {
-                throw new \Exception('Received content contained invalid JSON!');
-            }
+        if ($fileIsJSON && (!empty($this->file) && !Utils::isJson($this->file))) {
+            throw new \Exception('Received content contained invalid JSON!');
         }
     }
 
@@ -274,15 +264,15 @@ abstract class Rest_ApiAbstract
      * @param array $results
      * @return array
      */
-    private function getDirContents($dir, &$results = [])
+    private function getDirContents(string $dir, &$results = [])
     {
         $files = scandir($dir);
-        foreach ($files as $key => $value) {
-            $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
+        foreach ($files as $file) {
+            $path = realpath($dir . DIRECTORY_SEPARATOR . $file);
             if (!is_dir($path)) {
                 $results[] = basename($path, ".php");
             } 
-            elseif ($value != "." && $value != "..") {
+            elseif ($file !== "." && $file !== "..") {
                 $this->getDirContents($path, $results);
             }
         }

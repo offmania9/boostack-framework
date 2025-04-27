@@ -65,7 +65,7 @@ abstract class BaseClass implements \JsonSerializable
      * @return bool Always returns true.
      * @throws \Exception If an error occurs during preparation.
      */
-    public function fill($array)
+    public function fill(array $array)
     {
         $this->prepare($array);
         return true;
@@ -77,15 +77,13 @@ abstract class BaseClass implements \JsonSerializable
      * @param array $array The array containing data to fill the object.
      * @return bool Always returns true.
      */
-    public function clearAndFill($array)
+    public function clearAndFill(array $array)
     {
         $defaultValuesKeys = array_keys($this->default_values);
         $inputKeys = array_keys($array);
         $fieldsNotPresent = array_diff($inputKeys, $defaultValuesKeys, $this->system_excluded, $this->custom_excluded);
-        if (count($fieldsNotPresent) > 0) {
-            foreach ($fieldsNotPresent as $value)
-                unset($array[$value]);
-        }
+        foreach ($fieldsNotPresent as $fieldNotPresent)
+            unset($array[$fieldNotPresent]);
         return $this->fill($array);
     }
 
@@ -114,7 +112,7 @@ abstract class BaseClass implements \JsonSerializable
             return true;
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -128,8 +126,8 @@ abstract class BaseClass implements \JsonSerializable
     public static function exist($id)
     {
         try {
-            $current_object = new static();
-            $SD_sql = ($current_object->hasSoftDelete()) ? "AND deleted_at IS NULL" : "";
+            $static = new static();
+            $SD_sql = ($static->hasSoftDelete()) ? "AND deleted_at IS NULL" : "";
             $PDO = Database_PDO::getInstance();
             $sql = "SELECT id FROM " . static::TABLENAME . " WHERE id = :id " . $SD_sql;
             $q = $PDO->prepare($sql);
@@ -139,7 +137,7 @@ abstract class BaseClass implements \JsonSerializable
             return !empty($result);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -163,7 +161,7 @@ abstract class BaseClass implements \JsonSerializable
             }
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -186,7 +184,7 @@ abstract class BaseClass implements \JsonSerializable
      *
      * @param bool $value The value to set for soft delete status.
      */
-    public function setSoftDelete(bool $value)
+    public function setSoftDelete(bool $value): void
     {
         $this->soft_delete = $value;
     }
@@ -194,7 +192,7 @@ abstract class BaseClass implements \JsonSerializable
     /**
      * Enable soft delete.
      */
-    public function enableSoftDelete()
+    public function enableSoftDelete(): void
     {
         $this->setSoftDelete(true);
     }
@@ -202,7 +200,7 @@ abstract class BaseClass implements \JsonSerializable
     /**
      * Disable soft delete.
      */
-    public function disableSoftDelete()
+    public function disableSoftDelete(): void
     {
         $this->setSoftDelete(false);
     }
@@ -233,7 +231,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -253,7 +251,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -273,7 +271,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -329,8 +327,10 @@ abstract class BaseClass implements \JsonSerializable
     {
         $objVars = get_object_vars($this);
         $objVarsExported = array();
-        foreach ($objVars as $key => $value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+        foreach (array_keys($objVars) as $key) {
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $objVarsExported[] = $key;
         }
         return $objVarsExported;
@@ -357,7 +357,9 @@ abstract class BaseClass implements \JsonSerializable
         $objVarsExported = array();
         $objVarsExported["id"] = $objVars["id"];
         foreach ($objVars as $key => $value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $objVarsExported[$key] = $value;
         }
         return $objVarsExported;
@@ -366,7 +368,7 @@ abstract class BaseClass implements \JsonSerializable
     /**
      * Lock the table for read and write operations.
      */
-    public function lockTable()
+    public function lockTable(): void
     {
         $sql = "LOCK TABLES " . static::TABLENAME . " WRITE";
         $result = $this->PDO->prepare($sql);
@@ -376,7 +378,7 @@ abstract class BaseClass implements \JsonSerializable
     /**
      * Release all the locks for all the tables.
      */
-    public function unlockTable()
+    public function unlockTable(): void
     {
         $sql = "UNLOCK TABLES";
         $result = $this->PDO->prepare($sql);
@@ -402,8 +404,10 @@ abstract class BaseClass implements \JsonSerializable
     {
         $objVars = get_object_vars($this);
         $attributes = array();
-        foreach ($objVars as $key => $value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+        foreach (array_keys($objVars) as $key) {
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $attributes[] = $key;
         }
         return $attributes;
@@ -415,7 +419,7 @@ abstract class BaseClass implements \JsonSerializable
      * @param array $array An array containing the data to prepare.
      * @throws \Exception If required fields are missing.
      */
-    protected function prepare($array = array())
+    protected function prepare(array $array = array())
     {
         $defaultValuesKeys = array_keys($this->default_values);
         $inputKeys = array_keys($array);
@@ -423,12 +427,14 @@ abstract class BaseClass implements \JsonSerializable
         if (count($fieldsNotPresent) > 0) {
             throw new \Exception(implode(",", $fieldsNotPresent) . " are not found in object" . json_encode($inputKeys));
         }
-        if (!empty($array['id'])) $this->id = $array['id'];
-        foreach ($defaultValuesKeys as $defaultField) {
-            if (in_array($defaultField, $inputKeys)) {
-                $this->$defaultField = $array[$defaultField];
+        if (!empty($array['id'])) {
+            $this->id = $array['id'];
+        }
+        foreach ($defaultValuesKeys as $defaultValueKey) {
+            if (in_array($defaultValueKey, $inputKeys)) {
+                $this->{$defaultValueKey} = $array[$defaultValueKey];
             } else {
-                $this->$defaultField = $this->default_values[$defaultField];
+                $this->{$defaultValueKey} = $this->default_values[$defaultValueKey];
             }
         }
     }
@@ -438,7 +444,7 @@ abstract class BaseClass implements \JsonSerializable
      *
      * @return bool Returns true on successful insertion, false otherwise.
      */
-    private function insert()
+    private function insert(): bool
     {
         $objVars = get_object_vars($this);
 
@@ -446,7 +452,9 @@ abstract class BaseClass implements \JsonSerializable
         $secondPartOfQuery = "VALUES(NULL";
 
         foreach ($objVars as $key => $value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $firstPartOfQuery .= ",$key";
             $secondPartOfQuery .= ",:$key";
         }
@@ -458,7 +466,9 @@ abstract class BaseClass implements \JsonSerializable
         $q = $this->PDO->prepare($query);
 
         foreach ($objVars as $key => &$value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $q->bindParam(":" . $key, $value);
         }
 
@@ -484,7 +494,9 @@ abstract class BaseClass implements \JsonSerializable
         $secondPartOfQuery = "VALUES(";
 
         foreach ($objVars as $key => $value) {
-            if (in_array($key, $system_excluded_without_id) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $system_excluded_without_id) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $firstPartOfQuery .= "$key,";
             $secondPartOfQuery .= ":$key,";
         }
@@ -497,7 +509,9 @@ abstract class BaseClass implements \JsonSerializable
         $q = $this->PDO->prepare($query);
 
         foreach ($objVars as $key => &$value) {
-            if (in_array($key, $system_excluded_without_id) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $system_excluded_without_id) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $q->bindParam(":" . $key, $value);
         }
 
@@ -513,13 +527,15 @@ abstract class BaseClass implements \JsonSerializable
      *
      * @return bool Returns true on successful update, false otherwise.
      */
-    private function update()
+    private function update(): bool
     {
         $objVars = get_object_vars($this);
 
         $query = "UPDATE " . static::TABLENAME . " SET ";
         foreach ($objVars as $key => $value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $query .= "$key = :$key,";
         }
 
@@ -529,7 +545,9 @@ abstract class BaseClass implements \JsonSerializable
         $q = $this->PDO->prepare($query);
 
         foreach ($objVars as $key => &$value) {
-            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) continue;
+            if (in_array($key, $this->system_excluded) || in_array($key, $this->custom_excluded)) {
+                continue;
+            }
             $q->bindParam(":" . $key, $value);
         }
 
@@ -557,7 +575,7 @@ abstract class BaseClass implements \JsonSerializable
         $stmt->execute(['tableName' => static::TABLENAME, 'tableSchema' => Config::get("db_name")]);
         $columns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $ids = (!empty($this->id)) ? " WHERE id=" . $this->id : " WHERE id=1";
+        $ids = (empty($this->id)) ? " WHERE id=1" : " WHERE id=" . $this->id;
         $query = "SELECT * FROM " . static::TABLENAME . $ids;
         $stmt = $this->PDO->query($query);
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -568,11 +586,11 @@ abstract class BaseClass implements \JsonSerializable
 
         foreach ($data as $row) {
             $record = [];
-            foreach ($columns as $columnInfo) {
-                $columnName = $columnInfo['COLUMN_NAME'];
-                $columnType = $columnInfo['COLUMN_TYPE'];
-                $datatype = $columnInfo['DATA_TYPE'];
-                $maxLength = $columnInfo['CHARACTER_MAXIMUM_LENGTH'];
+            foreach ($columns as $column) {
+                $columnName = $column['COLUMN_NAME'];
+                $columnType = $column['COLUMN_TYPE'];
+                $datatype = $column['DATA_TYPE'];
+                $maxLength = $column['CHARACTER_MAXIMUM_LENGTH'];
 
                 if (!empty($this->id)) {
                     $record[$columnName] = [
@@ -625,12 +643,13 @@ abstract class BaseClass implements \JsonSerializable
      * @param object $obj The object to set properties for.
      * @param array $array The array containing property values.
      * @param array $arrayExcluded The keys to exclude from setting as properties.
-     * @return void
      */
-    public static function setObjFromArray(&$obj, $array, $arrayExcluded = array("id"))
+    public static function setObjFromArray(&$obj, $array, $arrayExcluded = array("id")): void
     {
         foreach ($array as $key => $value) {
-            if (in_array($key, $arrayExcluded)) continue;
+            if (in_array($key, $arrayExcluded)) {
+                continue;
+            }
             if ($value === "NULL") {
                 $value = NULL;
             }

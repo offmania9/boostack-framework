@@ -89,7 +89,6 @@ class User_Info extends \Boostack\Models\BaseClass
 
     /**
      * User_Info constructor.
-     * @param null $id
      */
     public function __construct($id = null)
     {

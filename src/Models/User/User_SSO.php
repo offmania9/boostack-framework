@@ -47,7 +47,6 @@ class User_SSO extends \Boostack\Models\BaseClassTraced
 
     /**
      * User_SSO constructor.
-     * @param null $id
      */
     public function __construct($id = null)
     {
@@ -62,7 +61,7 @@ class User_SSO extends \Boostack\Models\BaseClassTraced
      * @return bool Whether the user exists.
      * @throws \Exception If the user is not found and $throwException is true.
      */
-    public static function existsByEmail($email, $throwException = true)
+    public static function existsByEmail($email, $throwException = true): bool
     {
         $PDO = Database_PDO::getInstance();
         $query = "SELECT id FROM " . self::TABLENAME . " WHERE email = :email";
@@ -92,8 +91,9 @@ class User_SSO extends \Boostack\Models\BaseClassTraced
         $sql = empty($provider) ? "SELECT id FROM " . static::TABLENAME . " WHERE email = :email" : "SELECT id FROM " . static::TABLENAME . " WHERE email = :email AND provider= :provider AND active='1'";
         $q = $PDO->prepare($sql);
         $q->bindValue(':email', $email);
-        if (!empty($provider))
+        if (!empty($provider)) {
             $q->bindValue(':provider', $provider);
+        }
         $q->execute();
         $q2 = $q->fetch();
         if ($q->rowCount() == 0) {

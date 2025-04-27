@@ -2,7 +2,7 @@
 
 namespace Boostack\Models\User;
 
-use Boostack\Exception\Exception_LoginFailed;
+use Boostack\Exceptions\Exception_LoginFailed;
 use Boostack\Models\Database\Database_PDO;
 
 /**
@@ -57,7 +57,6 @@ class User_Entity extends \Boostack\Models\BaseClass
 
     /**
      * User_Entity constructor.
-     * @param null $id
      */
     public function __construct($id = null)
     {
@@ -83,7 +82,7 @@ class User_Entity extends \Boostack\Models\BaseClass
      *
      * @param array $array The array containing property values.
      */
-    protected function prepare($array = array())
+    protected function prepare(array $array = array())
     {
         if (empty($array["id"]) && !empty($array["pwd"])) {
             $array["pwd"] = $this->passwordToHash($array["pwd"]);
@@ -109,7 +108,7 @@ class User_Entity extends \Boostack\Models\BaseClass
      * @param string $cleanPassword The password to hash.
      * @return bool|string The hashed password.
      */
-    public function passwordToHash($cleanPassword)
+    public function passwordToHash($cleanPassword): string
     {
         if (version_compare(PHP_VERSION, '5.6.0') >= 0) {
             return password_hash($cleanPassword, PASSWORD_DEFAULT);
@@ -169,7 +168,7 @@ class User_Entity extends \Boostack\Models\BaseClass
      * @return bool Whether the user exists.
      * @throws \Exception If the user is not found and $throwException is true.
      */
-    public static function existsByEmail($email, $throwException = true)
+    public static function existsByEmail($email, $throwException = true): bool
     {
         $PDO = Database_PDO::getInstance();
         $query = "SELECT id FROM " . self::TABLENAME . " WHERE email = :email";
@@ -193,7 +192,7 @@ class User_Entity extends \Boostack\Models\BaseClass
      * @return bool Whether the user exists.
      * @throws \Exception If the user is not found and $throwException is true.
      */
-    public static function existsByUsername($username, $throwException = true)
+    public static function existsByUsername($username, $throwException = true): bool
     {
         $PDO = Database_PDO::getInstance();
         $query = "SELECT id FROM " . self::TABLENAME . " WHERE username = :username";

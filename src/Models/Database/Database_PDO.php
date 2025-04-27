@@ -22,19 +22,12 @@ use Boostack\Models\Log\Log_Driver;
 class Database_PDO
 {
     /** @var \PDO|null The singleton instance of \PDO. */
-    private static $instance = null;
+    private static $pdo;
 
     /**
      * Prevents direct instantiation of Database_PDO.
      */
     private function __construct()
-    {
-    }
-
-    /**
-     * Prevents cloning of Database_PDO object.
-     */
-    private function __clone()
     {
     }
 
@@ -50,10 +43,10 @@ class Database_PDO
      */
     public static function getInstance($host = null, $dbname = null, $username = null, $password = null, $port = 3306)
     {
-        if (self::$instance === null) {
-            self::$instance = self::createInstance($host, $dbname, $username, $password, $port);
+        if (self::$pdo === null) {
+            self::$pdo = self::createInstance($host, $dbname, $username, $password, $port);
         }
-        return self::$instance;
+        return self::$pdo;
     }
 
     /**
@@ -83,7 +76,7 @@ class Database_PDO
         } catch (\PDOException $e) {
             $message = "See log file. An error occurred in DB connection:" . $e->getMessage() . $e->getTraceAsString() . "\n";
             Logger::write($message, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException($e);
+            throw new \PDOException($e, $e->getCode(), $e);
         }
     }
 }

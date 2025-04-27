@@ -12,27 +12,29 @@ namespace Boostack\Models\Field;
 class FieldRule
 {
 
-    private $field;
-    private $required;
+    private \Boostack\Models\Field\Field $field;
+    private ?bool $required = null;
 
     public function __construct($name, $type)
     {
-        if (!FieldType::isValidValue($type))
+        if (!FieldType::isValidValue($type)) {
             throw new \Exception("error: wrong field type");
+        }
         $this->field = new Field($name, $type);
         $this->field->rules["name"] = $name;
         $this->field->rules["type"] = $type;
         $this->field->rules["required"] = false;
     }
 
-    public function get()
+    public function get(): array
     {
-        if ($this->required)
+        if ($this->required) {
             $this->addRule("required", true);
+        }
         return $this->field->rules;
     }
 
-    public function getString()
+    public function getString(): string
     {
         $a = $this->get();
         $res = "";
@@ -42,107 +44,102 @@ class FieldRule
         return substr($res, 0, -1);
     }
 
-    public function required()
+    public function required(): self
     {
         $this->required = true;
         return $this;
     }
 
-    public function title($str)
+    public function title($str): self
     {
         $this->addRule("title", $str);
         return $this;
     }
 
-    public function placeholder($str)
+    public function placeholder($str): self
     {
         $this->addRule("placeholder", $str);
         return $this;
     }
 
-    public function regex($str)
+    public function regex($str): self
     {
         $this->addRule("regex", $str);
         return $this;
     }
 
-    public function defaultValue($val)
+    public function defaultValue($val): self
     {
         $this->addRule("defaultValue", $val);
         return $this;
     }
 
-    public function options(array $val)
+    public function options(array $val): self
     {
         $this->constraint(array(FieldType::COMBO));
         $this->addRule("options", $val);
         return $this;
     }
 
-    public function description($str)
+    public function description($str): self
     {
         $this->addRule("description", $str);
         return $this;
     }
 
-    public function max($upperbound)
+    public function max($upperbound): self
     {
         $this->constraint(array(FieldType::INTEGER, FieldType::FLOAT, FieldType::NUMERIC));
         $this->addRule("max", $upperbound);
         return $this;
     }
 
-    public function min($lowerbound)
+    public function min($lowerbound): self
     {
         $this->constraint(array(FieldType::INTEGER, FieldType::FLOAT, FieldType::NUMERIC));
         $this->addRule("min", $lowerbound);
         return $this;
     }
 
-    public function min_length($min_length)
+    public function min_length($min_length): self
     {
         $this->constraint(array(FieldType::STRING, FieldType::TEXT, FieldType::EMAIL, FieldType::USERNAME, FieldType::PASSWORD));
         $this->addRule("min_length", $min_length);
         return $this;
     }
 
-    public function max_length($max_length)
+    public function max_length($max_length): self
     {
         $this->constraint(array(FieldType::STRING, FieldType::TEXT, FieldType::EMAIL, FieldType::USERNAME, FieldType::PASSWORD));
         $this->addRule("max_length", $max_length);
         return $this;
     }
 
-    public function from(\DateTime $d)
+    public function from(\DateTime $d): self
     {
         $this->addRule("from", $d->format(\Boostack\Models\Config::get("default_datetime_format")));
         return $this;
     }
 
-    public function to(\DateTime $d)
+    public function to(\DateTime $d): self
     {
         $this->constraint(array(FieldType::DATE));
         $this->addRule("to", $d->format(\Boostack\Models\Config::get("default_datetime_format")));
         return $this;
     }
 
-    private function constraint(array $types)
+    private function constraint(array $types): void
     {
         if (!in_array($this->field->type, $types)) {
-            $ex = new \Exception();
-            $trace = $ex->getTrace();
+            $exception = new \Exception();
+            $trace = $exception->getTrace();
             $final_call = $trace[1]["function"];
             throw new \Exception("error: you cannot call method '" . $final_call . "' on '" . $this->field->type . "' field type");
         }
     }
 
-    private function addRule($name, $value)
+    private function addRule(string $name, $value): void
     {
         $this->field->rules[$name] = $value;
-    }
-
-    private function concat()
-    {
-        return "|";
     }
 }

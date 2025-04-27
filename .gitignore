@@ -5,3 +5,4 @@
 /composer.lock
 /vendor/*
 !/vendor/.htaccess
+var/cache

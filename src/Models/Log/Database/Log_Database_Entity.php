@@ -59,7 +59,6 @@ class Log_Database_Entity extends \Boostack\Models\BaseClass
 
     /**
      * Log_Database_Entity constructor.
-     * @param null $id
      */
     public function __construct($id = NULL)
     {
@@ -73,18 +72,7 @@ class Log_Database_Entity extends \Boostack\Models\BaseClass
      */
     public function jsonSerialize(): mixed
     {
-        $data_log = array();
-        $data_log["id"] = $this->id;
-        $data_log["level"] = $this->level;
-        $data_log["datetime"] = $this->datetime;
-        $data_log["username"] = $this->username;
-        $data_log["ip"] = $this->ip;
-        $data_log["useragent"] = $this->useragent;
-        $data_log["referrer"] = $this->referrer;
-        $data_log["query"] = $this->query;
-        $data_log["message"] = $this->message;
-
-        return $data_log;
+        return ["id" => $this->id, "level" => $this->level, "datetime" => $this->datetime, "username" => $this->username, "ip" => $this->ip, "useragent" => $this->useragent, "referrer" => $this->referrer, "query" => $this->query, "message" => $this->message];
     }
 
     /**
@@ -92,19 +80,8 @@ class Log_Database_Entity extends \Boostack\Models\BaseClass
      *
      * @return array The attribute list for search.
      */
-    public function getAttrListForSearch()
+    public function getAttrListForSearch(): array
     {
-        $data_log = array();
-        $data_log["id"] = $this->id;
-        $data_log["level"] = $this->level;
-        $data_log["datetime"] = $this->datetime;
-        $data_log["username"] = $this->username;
-        $data_log["ip"] = $this->ip;
-        $data_log["useragent"] = $this->useragent;
-        $data_log["referrer"] = $this->referrer;
-        $data_log["query"] = $this->query;
-        $data_log["message"] = $this->message;
-
-        return $data_log;
+        return ["id" => $this->id, "level" => $this->level, "datetime" => $this->datetime, "username" => $this->username, "ip" => $this->ip, "useragent" => $this->useragent, "referrer" => $this->referrer, "query" => $this->query, "message" => $this->message];
     }
 }

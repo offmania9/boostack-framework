@@ -29,7 +29,9 @@ class Cache
      */
     public static function has($key)
     {
-        if (!Config::get("cache_enabled")) return false;
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
         $result = self::get($key);
         return $result != false;
     }
@@ -42,7 +44,9 @@ class Cache
      */
     public static function get($key)
     {
-        if (!Config::get("cache_enabled")) return false;
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
         $sql = "SELECT * FROM " . static::TABLENAME . " WHERE `key` = :key";
@@ -69,8 +73,12 @@ class Cache
      */
     public static function set($key, $value)
     {
-        if (!Config::get("cache_enabled")) return false;
-        if (Cache::has($key)) return Cache::update($key, $value);
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
+        if (Cache::has($key)) {
+            return Cache::update($key, $value);
+        }
         $currentTime = date('Y-m-d H:i:s', time());
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
@@ -97,8 +105,12 @@ class Cache
      */
     public static function update($key, $value)
     {
-        if (!Config::get("cache_enabled")) return false;
-        if (!Cache::has($key)) return Cache::set($key, $value);
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
+        if (!Cache::has($key)) {
+            return Cache::set($key, $value);
+        }
         $currentTime = date('Y-m-d H:i:s', time());
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
@@ -125,7 +137,9 @@ class Cache
      */
     public static function delete($key)
     {
-        if (!Config::get("cache_enabled")) return false;
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME . " WHERE `key` = :key";
@@ -147,7 +161,9 @@ class Cache
      */
     public static function clearAll()
     {
-        if (!Config::get("cache_enabled")) return false;
+        if (!Config::get("cache_enabled")) {
+            return false;
+        }
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME;
         $stmt = $PDO->prepare($sql);
@@ -166,7 +182,7 @@ class Cache
      * @param string $key The key to hash.
      * @return string The hashed representation of the key.
      */
-    private static function hashKey($key)
+    private static function hashKey($key): string
     {
         return hash(self::ALGO, $key);
     }

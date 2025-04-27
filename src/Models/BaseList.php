@@ -83,14 +83,14 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      * Adds an element to the list.
      * @param $element
      */
-    public function add($element)
+    public function add($element): void
     {
         $this->items[] = $element;
     }
     /**
      * Clears the items array.
      */
-    public function clear()
+    public function clear(): void
     {
         $this->items = [];
     }
@@ -119,21 +119,30 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      * @param string $orderType
      * @param int $numitem
      * @param int $currentPage
-     * @return int
      * @throws \Exception
      */
-    public function view(array $fields = null, $orderColumn = "", $orderType = "ASC", $numitem = 25, $currentPage = 1, array $joins = []): int
+    public function view(array $fields = null, ?string $orderColumn = "", $orderType = "ASC", $numitem = 25, $currentPage = 1, array $joins = []): int
     {
         try {
             $sql = "";
             $orderType = strtoupper($orderType);
 
             $error = false;
-            if (!is_numeric($numitem)) $error = "Wrong num_item type";
-            if (!is_numeric($currentPage) || $currentPage < 0) $error = "Wrong current_page format";
-            if (!($orderType == self::ORDER_ASC || $orderType == self::ORDER_DESC)) $error = "Wrong order_type format";
-            if (!(is_array($fields) && count($fields) > 0)) $error = "Wrong field_view format";
-            if ($error !== false) throw new \Exception($error);
+            if (!is_numeric($numitem)) {
+                $error = "Wrong num_item type";
+            }
+            if (!is_numeric($currentPage) || $currentPage < 0) {
+                $error = "Wrong current_page format";
+            }
+            if ($orderType !== self::ORDER_ASC && $orderType !== self::ORDER_DESC) {
+                $error = "Wrong order_type format";
+            }
+            if (!(is_array($fields) && count($fields) > 0)) {
+                $error = "Wrong field_view format";
+            }
+            if ($error !== false) {
+                throw new \Exception($error);
+            }
 
             $joinClause = "";
             foreach ($joins as $join) {
@@ -151,52 +160,47 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             $separator = " AND ";
             $count = 0;
             if (count($fields) > 0) {
-                foreach ($fields as $option) {
-                    $option[0] = $this->baseClassTablename . "." . $option[0];
-                    if ($count > 0) $sql .= $separator;
-                    $option[1] = strtoupper($option[1]);
-                    switch ($option[1]) {
+                foreach ($fields as $field) {
+                    $field[0] = $this->baseClassTablename . "." . $field[0];
+                    if ($count > 0) {
+                        $sql .= $separator;
+                    }
+                    $field[1] = strtoupper($field[1]);
+                    switch ($field[1]) {
                         case '<>':
-                        case '&LT;&GT;': {
-                                if ($option[2] === null) {
-                                    $sql .= $option[0] . " IS NOT NULL";
-                                } else {
-                                    $sql .= $option[0] . " != '" . $option[2] . "'";
-                                }
-                                break;
+                        case '&LT;&GT;':
+                            if ($field[2] === null) {
+                                $sql .= $field[0] . " IS NOT NULL";
+                            } else {
+                                $sql .= $field[0] . " != '" . $field[2] . "'";
                             }
-                        case 'LIKE': {
-                                $sql .= $option[0] . " " . $option[1] . " '%" . $option[2] . "%'";
-                                break;
+                            break;
+                        case 'LIKE':
+                            $sql .= $field[0] . " " . $field[1] . " '%" . $field[2] . "%'";
+                            break;
+                        case '=':
+                            if ($field[2] === null) {
+                                $sql .= $field[0] . " IS NULL";
+                            } else {
+                                $sql .= $field[0] . " = '" . $field[2] . "'";
                             }
-                        case '=': {
-                                if ($option[2] === null) {
-                                    $sql .= $option[0] . " IS NULL";
-                                } else {
-                                    $sql .= $option[0] . " = '" . $option[2] . "'";
-                                }
-                                break;
-                            }
+                            break;
                         case '<':
-                        case '&LT;': {
-                                $sql .= $option[0] . " < '" . $option[2] . "'";
-                                break;
-                            }
+                        case '&LT;':
+                            $sql .= $field[0] . " < '" . $field[2] . "'";
+                            break;
                         case '<=':
-                        case '&LT;=': {
-                                $sql .= $option[0] . " <= '" . $option[2] . "'";
-                                break;
-                            }
+                        case '&LT;=':
+                            $sql .= $field[0] . " <= '" . $field[2] . "'";
+                            break;
                         case '>':
-                        case '&GT;': {
-                                $sql .= $option[0] . " > '" . $option[2] . "'";
-                                break;
-                            }
+                        case '&GT;':
+                            $sql .= $field[0] . " > '" . $field[2] . "'";
+                            break;
                         case '>=':
-                        case '&GT;=': {
-                                $sql .= $option[0] . " >= '" . $option[2] . "'";
-                                break;
-                            }
+                        case '&GT;=':
+                            $sql .= $field[0] . " >= '" . $field[2] . "'";
+                            break;
                     }
                     $count++;
                 }
@@ -215,16 +219,12 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
 
             if ($orderColumn != "") {
                 $sql .= " ORDER BY " . $this->baseClassTablename . "." . $orderColumn;
-                if ($orderType != "") {
+                if ($orderType !== "") {
                     $sql .= " " . $orderType;
                 }
             }
             if ($numitem != NULL) {
-                if ($currentPage == 1) {
-                    $lowerBound = ($currentPage - 1);
-                } else {
-                    $lowerBound = ($currentPage - 1) * $numitem;
-                }
+                $lowerBound = $currentPage == 1 ? $currentPage - 1 : ($currentPage - 1) * $numitem;
                 $upperBound = $numitem;
                 $sql .= " LIMIT " . $lowerBound . "," . $upperBound;
             }
@@ -237,7 +237,7 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             return $queryNumberResult;
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database Exception. Please see log file.");
+            throw new \PDOException("Database Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -260,10 +260,11 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      */
     protected function remove($key, $shift = true)
     {
-        if ($shift)
+        if ($shift) {
             array_splice($this->items, $key, 1);
-        else
+        } else {
             unset($this->items[$key]);
+        }
         return true;
     }
 
@@ -271,13 +272,12 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
      * Purge all items from the items array.
      * @param $key
      * @param bool $shift
-     * @return bool
      */
-    public function purgeAllItems()
+    public function purgeAllItems(): void
     {
         if (count($this->items) > 0) {
-            foreach ($this->items as $obj) {
-                $obj->purge();
+            foreach ($this->items as $item) {
+                $item->purge();
             }
         }
     }
@@ -323,11 +323,10 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
             $this->fill($queryResults);
-            $countResult = count($queryResults);
-            return $countResult;
+            return count($queryResults);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -352,7 +351,7 @@ AND column_name NOT IN ('created_at', 'last_update','last_access')";
             return $q->fetchAll(\PDO::FETCH_COLUMN);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 
@@ -370,12 +369,12 @@ AND column_name NOT IN ('created_at', 'last_update','last_access')";
             $q = $this->PDO->prepare($sql);
             $q->execute();
             $columns = $q->fetchAll(\PDO::FETCH_COLUMN);
-            return array_map(function ($column) use ($tableName) {
+            return array_map(function ($column) use ($tableName): string {
                 return "$tableName.$column";
             }, $columns);
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.");
+            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
         }
     }
 }

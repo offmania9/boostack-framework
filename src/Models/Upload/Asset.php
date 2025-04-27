@@ -33,12 +33,12 @@ class Asset extends BaseClassTraced
         parent::init($id);
     }
 
-    public function loadFromFile(Upload_File $file)
+    public function loadFromFile(Upload_File $uploadFile): void
     {
-        $this->temp_name = $file->name;
-        $this->filename = $file->name;
-        $this->type = $file->type;
-        $this->size = $file->size;
-        $this->extension = $file->extension;
+        $this->temp_name = $uploadFile->name;
+        $this->filename = $uploadFile->name;
+        $this->type = $uploadFile->type;
+        $this->size = $uploadFile->size;
+        $this->extension = $uploadFile->extension;
     }
 }

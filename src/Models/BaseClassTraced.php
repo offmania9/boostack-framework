@@ -24,7 +24,6 @@ abstract class BaseClassTraced extends \Boostack\Models\BaseClass
 
     /**
      * Constructor.
-     * @param null $id
      */
     protected function init($id = null)
     {
@@ -59,7 +58,6 @@ abstract class BaseClassTraced extends \Boostack\Models\BaseClass
 
     /**
      * Save the object into the database.
-     * @param null $forcedID
      * @return bool
      */
     public function save($forcedID = null)

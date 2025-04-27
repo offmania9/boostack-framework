@@ -47,7 +47,6 @@ class User_Social extends \Boostack\Models\BaseClass
 
     /**
      * User_Social constructor.
-     * @param null $id
      */
     public function __construct($id = null)
     {
