@@ -402,12 +402,12 @@ class User implements \JsonSerializable
     }
 
     /**
-     * Sends a confirmation email to the user.
+     * Render a confirmation email to the user.
      *
      * @param string $HTMLtemplate The HTML template for the email. Defaults to "new_pre_user.html".
      * @throws \Exception If there is an error in sending the email.
      */
-    public function sendConfirmationMail(string $HTMLtemplate = "new_pre_user.html"): void
+    public function renderConfirmationMail(string $HTMLtemplate = "new_pre_user.html"): string
     {
         $msg = View::getMailTemplate($HTMLtemplate, [
             "help_mail" => Config::get('mail_from'),
@@ -418,30 +418,16 @@ class User implements \JsonSerializable
             "hr_mail" => Config::get('mail_from'),
             "login_link" => Config::get('url')
         ]);
-
-        if (Config::get('useMailgun')) {
-            $emailMailgun = new \Boostack\Models\Email\Email_Mailgun([
-                "from_mail" => Config::get("mail_from"),
-                "from_name" => Config::get("name_from"),
-                "bcc" => Config::get("mail_bcc"),
-                "to" => $this->email,
-                "subject" => Language::getLabel("email.confirmation_subject"),
-                "message" => $msg
-            ]);
-
-            if (!$emailMailgun->send()) {
-                throw new \Exception("Error sending confirmation email (sendConfirmationMail)");
-            }
-        }
+        return $msg;
     }
 
     /**
-     * Sends a welcome email to the user.
+     * Render a welcome email to the user.
      *
      * @param string $HTMLtemplate The HTML template for the email. Defaults to "new_user_welcome.html".
      * @throws \Exception If there is an error in sending the email.
      */
-    public function sendWelcomeMail(string $HTMLtemplate = "new_user_welcome.html"): void
+    public function renderWelcomeMail(string $HTMLtemplate = "new_user_welcome.html"): string
     {
         $msg = View::getMailTemplate($HTMLtemplate, [
             "help_mail" => Config::get('mail_from'),
@@ -451,21 +437,7 @@ class User implements \JsonSerializable
             "hr_mail" => Config::get('mail_from'),
             "login_link" => Config::get('url')
         ]);
-
-        if (Config::get('useMailgun')) {
-            $emailMailgun = new \Boostack\Models\Email\Email_Mailgun([
-                "from_mail" => Config::get("mail_from"),
-                "from_name" => Config::get("name_from"),
-                "bcc" => Config::get("mail_bcc"),
-                "to" => $this->email,
-                "subject" => Language::getLabel("email.welcome_subject"),
-                "message" => $msg
-            ]);
-
-            if (!$emailMailgun->send()) {
-                throw new \Exception("Error sending welcome email (sendWelcomeMail)");
-            }
-        }
+        return $msg;
     }
 
     /**

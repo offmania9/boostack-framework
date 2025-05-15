@@ -147,7 +147,6 @@ abstract class Rest_ApiAbstract
         } catch (\Exception $e) {
             $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
         } finally {
-            Auth::impressLastTry();
             $this->trackRequest();
             $this->apiRequest->save();
         }
