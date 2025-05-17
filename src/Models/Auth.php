@@ -37,7 +37,7 @@ class Auth
      * @param bool $cookieRememberMe Flag to indicate whether to set the "Remember Me" cookie.
      * @return MessageBag Object containing information about the login result.
      */
-    public static function loginByUsernameAndPlainPassword($username, $password, $cookieRememberMe = false)
+     public static function loginByUsernameAndPlainPassword($username, $password, $cookieRememberMe = false)
     {
         $messageBag = new MessageBag();
         $isLockStrategyEnabled = Config::get("lockStrategy_on");
@@ -45,6 +45,7 @@ class Auth
 
         try {
             if (Auth::isLoggedIn()) {
+                $messageBag->message = "Already logged in.";
                 return $messageBag;
             }
 
@@ -81,7 +82,7 @@ class Auth
                 throw new Exception_LoginFailed("Invalid CSRF Token validity");
             }
 
-            Auth::checkAndLogin($username, $password, $cookieRememberMe, true);
+            Auth::checkAndLogin($username, $password, $cookieRememberMe, true); 
 
             if ($isLockStrategyEnabled) {
                 Session::set("failed_login_count", 0);
