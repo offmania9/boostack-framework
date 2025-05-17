@@ -37,6 +37,16 @@ class Request
     }
 
     /**
+     * Retrieves the current HTTP method of the request.
+     *
+     * @return HttpMethod The HTTP method (GET, POST, etc.).
+     */
+    public static function getMethod(): HttpMethod
+    {
+        return HttpMethod::from(self::$server['REQUEST_METHOD']);
+    }
+
+    /**
      * Checks if a parameter exists in a specific request type.
      *
      * @param string $type The request type (e.g., 'POST', 'QUERY', 'SERVER', 'HEADERS', 'COOKIE', 'REQUEST', 'FILES').
@@ -136,6 +146,18 @@ class Request
     }
 
     /**
+     * Sets a POST parameter value (useful for internal overwrites).
+     *
+     * @param string $key The parameter key.
+     * @param mixed $value The value to assign.
+     * @return void
+     */
+    public static function setPostParam(string $key, mixed $value): void
+    {
+        self::$post[$key] = self::sanitizeInput($value);
+    }
+
+    /**
      * Checks if a QUERY parameter exists.
      *
      * @param string $param The parameter name.
@@ -159,6 +181,19 @@ class Request
         $value = self::get($rt, $param);
         return $value !== null ? self::sanitizeInput($value) : $default;
     }
+
+    /**
+     * Sets a QUERY parameter value (useful for internal overwrites).
+     *
+     * @param string $key The parameter key.
+     * @param mixed $value The value to assign.
+     * @return void
+     */
+    public static function setQueryParam(string $key, mixed $value): void
+    {
+        self::$query[$key] = self::sanitizeInput($value);
+    }
+
 
     /**
      * Retrieves all QUERY parameters.
@@ -290,6 +325,18 @@ class Request
     {
         $rt = RequestType::REQUEST;
         return self::sanitizeInput(self::get($rt, $param));
+    }
+
+    /**
+     * Sets a REQUEST parameter value (useful for internal overwrites).
+     *
+     * @param string $key The parameter key.
+     * @param mixed $value The value to assign.
+     * @return void
+     */
+    public static function setRequestParam(string $key, mixed $value): void
+    {
+        self::$request[$key] = self::sanitizeInput($value);
     }
 
     /**

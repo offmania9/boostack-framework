@@ -2,6 +2,8 @@
 
 namespace Boostack\Models\Curl;
 
+use Boostack\Models\HttpMethod;
+
 /**
  * Boostack: CurlRequest.php
  * ========================================================================
@@ -11,20 +13,6 @@ namespace Boostack\Models\Curl;
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
  * @version 6.0
  */
-
-/**
- * Enum for HTTP Methods.
- */
-enum HttpMethod: string
-{
-    case GET = 'GET';
-    case POST = 'POST';
-    case PUT = 'PUT';
-    case PATCH = 'PATCH';
-    case DELETE = 'DELETE';
-    case HEAD = 'HEAD';
-    case OPTIONS = 'OPTIONS';
-}
 
 /**
  * CurlRequest class for making cURL requests.

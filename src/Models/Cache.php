@@ -14,7 +14,7 @@ use Boostack\Models\Log\Logger;
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 class Cache
 {
@@ -29,11 +29,9 @@ class Cache
      */
     public static function has($key)
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
+        if (!Config::get("cache_enabled")) return false;
         $result = self::get($key);
-        return $result != false;
+        return $result !== false;
     }
 
     /**
@@ -44,9 +42,7 @@ class Cache
      */
     public static function get($key)
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
+        if (!Config::get("cache_enabled")) return false;
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
         $sql = "SELECT * FROM " . static::TABLENAME . " WHERE `key` = :key";
@@ -57,7 +53,7 @@ class Cache
         } catch (\Exception $e) {
             Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
         }
-        if (!$stmt->execute() || $stmt->rowCount() != 1) {
+        if (!$stmt->execute() || $stmt->rowCount() !== 1) {
             return false;
         }
         $results = $stmt->fetch(\PDO::FETCH_OBJ);
@@ -73,29 +69,27 @@ class Cache
      */
     public static function set($key, $value)
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
-        if (Cache::has($key)) {
-            return Cache::update($key, $value);
-        }
-        $currentTime = date('Y-m-d H:i:s', time());
-        $hashedKey = self::hashKey($key);
-        $PDO = Database_PDO::getInstance();
-        $sql = "INSERT INTO " . static::TABLENAME . " (`key`, `key_plain`, `value`, `created_at`, `last_update`) VALUES (:key, :key_plain, :value, :created_at, :last_update)";
-        $q = $PDO->prepare($sql);
-        $q->bindValue(':key', $hashedKey);
-        $q->bindValue(':key_plain', Request::sanitizeInput($key));
-        $q->bindValue(':value', json_encode($value));
-        $q->bindValue(':created_at', $currentTime);
-        $q->bindValue(':last_update', $currentTime);
+        if (!Config::get("cache_enabled")) return false;
+        if (Cache::has($key)) return Cache::update($key, $value);
         try {
+            $currentTime = date('Y-m-d H:i:s', time());
+            $hashedKey = self::hashKey($key);
+            $PDO = Database_PDO::getInstance();
+            $sql = "INSERT INTO " . static::TABLENAME . " (`key`, `key_plain`, `value`, `created_at`, `last_update`) VALUES (:key, :key_plain, :value, :created_at, :last_update)";
+            $q = $PDO->prepare($sql);
+            $q->bindValue(':key', $hashedKey);
+            $q->bindValue(':key_plain', Request::sanitizeInput($key));
+            $q->bindValue(':value', json_encode($value)); 
+            $q->bindValue(':created_at', $currentTime);
+            $q->bindValue(':last_update', $currentTime);
             $q->execute();
         } catch (\Exception $e) {
-            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+            Logger::write($e, Log_Level::WARNING, Log_Driver::BOTH);
+            return false;
         }
         return true;
     }
+
     /**
      * Updates the value associated with the specified key in the cache.
      *
@@ -105,12 +99,8 @@ class Cache
      */
     public static function update($key, $value)
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
-        if (!Cache::has($key)) {
-            return Cache::set($key, $value);
-        }
+        if (!Config::get("cache_enabled")) return false;
+        if (!Cache::has($key)) return Cache::set($key, $value);
         $currentTime = date('Y-m-d H:i:s', time());
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
@@ -129,7 +119,7 @@ class Cache
         return true;
     }
 
-     /**
+    /**
      * Deletes a single entry from the cache table by key.
      *
      * @param string $key The key to delete.
@@ -137,9 +127,7 @@ class Cache
      */
     public static function delete($key)
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
+        if (!Config::get("cache_enabled")) return false;
         $hashedKey = self::hashKey($key);
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME . " WHERE `key` = :key";
@@ -161,9 +149,7 @@ class Cache
      */
     public static function clearAll()
     {
-        if (!Config::get("cache_enabled")) {
-            return false;
-        }
+        if (!Config::get("cache_enabled")) return false;
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME;
         $stmt = $PDO->prepare($sql);
@@ -182,7 +168,7 @@ class Cache
      * @param string $key The key to hash.
      * @return string The hashed representation of the key.
      */
-    private static function hashKey($key): string
+    private static function hashKey($key)
     {
         return hash(self::ALGO, $key);
     }
