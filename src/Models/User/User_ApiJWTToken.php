@@ -1,8 +1,11 @@
 <?php
+
 namespace Boostack\Models\User;
+
 use Boostack\Models\Request;
 use Boostack\Models\Config;
 use Boostack\Models\User\User;
+
 /**
  * Boostack: User_ApiJWTToken.php
  * ========================================================================
@@ -13,7 +16,7 @@ use Boostack\Models\User\User;
  * @version 6.0
  */
 
-require  __DIR__ . '/../vendor/autoload.php';
+//require  __DIR__ . '/../../../vendor/autoload.php';
 
 use \Firebase\JWT\JWT;
 // use \Firebase\JWT\Expired\Exception;
@@ -57,6 +60,7 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      */
     public function __construct()
     {
+        parent::init();
         $this->soft_delete = true;
     }
 
