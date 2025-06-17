@@ -37,7 +37,7 @@ class Auth
      * @param bool $cookieRememberMe Flag to indicate whether to set the "Remember Me" cookie.
      * @return MessageBag Object containing information about the login result.
      */
-     public static function loginByUsernameAndPlainPassword($username, $password, $cookieRememberMe = false)
+    public static function loginByUsernameAndPlainPassword($username, $password, $cookieRememberMe = false)
     {
         $messageBag = new MessageBag();
         $isLockStrategyEnabled = Config::get("lockStrategy_on");
@@ -82,7 +82,7 @@ class Auth
                 throw new Exception_LoginFailed("Invalid CSRF Token validity");
             }
 
-            Auth::checkAndLogin($username, $password, $cookieRememberMe, true); 
+            Auth::checkAndLogin($username, $password, $cookieRememberMe, true);
 
             if ($isLockStrategyEnabled) {
                 Session::set("failed_login_count", 0);
@@ -520,10 +520,17 @@ class Auth
      */
     public static function currentUserIs(int $privilegeLevel): bool
     {
-        if (!UserPrivilege::isValid($privilegeLevel)) {
-            throw new \InvalidArgumentException("Invalid privilege level: $privilegeLevel");
+        try {
+            if (!UserPrivilege::isValid($privilegeLevel)) {
+                throw new \InvalidArgumentException("Invalid privilege level: $privilegeLevel");
+            }
+            $isCurrentUser = self::hasPrivilege(self::getUserLoggedObject(), $privilegeLevel);;
+            return $isCurrentUser;
+        } catch (\Throwable $throwable) {
+            $m = "ErrorMsg: " . $throwable->getMessage();
+            Logger::write("Fatal error: " . $m . "StackT: " . $throwable->getTraceAsString(), Log_Level::ERROR, Log_Driver::BOTH);
+            return false;
         }
-        return self::hasPrivilege(self::getUserLoggedObject(), $privilegeLevel);
     }
 
     /**
