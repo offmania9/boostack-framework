@@ -4,7 +4,7 @@ namespace Boostack\Controllers;
 
 abstract class Controller
 {
-    public function init(){
+    public static function init(){
 
     }
 }
