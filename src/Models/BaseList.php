@@ -112,104 +112,112 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
         return $this->items;
     }
 
+
     /**
-     * Retrieves values with field filtering, ordering, and pagination.
+     * Retrieves values with field filtering, ordering, grouping and pagination.
      * @param array|null $fields
      * @param string $orderColumn
      * @param string $orderType
      * @param int $numitem
      * @param int $currentPage
+     * @param array $joins
+     * @param array|string|null $groupBy
+     * @return int
      * @throws \Exception
      */
-    public function view(array $fields = null, ?string $orderColumn = "", $orderType = "ASC", $numitem = 25, $currentPage = 1, array $joins = []): int
+    public function view(?array $fields, string $orderColumn = "", string $orderType = "ASC", int $numitem = 25, int $currentPage = 1, array $joins = [], array|string|null $groupBy = null): int
     {
         try {
             $sql = "";
             $orderType = strtoupper($orderType);
-
             $error = false;
-            if (!is_numeric($numitem)) {
-                $error = "Wrong num_item type";
-            }
-            if (!is_numeric($currentPage) || $currentPage < 0) {
-                $error = "Wrong current_page format";
-            }
-            if ($orderType !== self::ORDER_ASC && $orderType !== self::ORDER_DESC) {
-                $error = "Wrong order_type format";
-            }
-            if (!(is_array($fields) && count($fields) > 0)) {
-                $error = "Wrong field_view format";
-            }
-            if ($error !== false) {
-                throw new \Exception($error);
-            }
+
+            if (!is_numeric($numitem)) $error = "Wrong num_item type";
+            if (!is_numeric($currentPage) || $currentPage < 0) $error = "Wrong current_page format";
+            if (!($orderType == self::ORDER_ASC || $orderType == self::ORDER_DESC)) $error = "Wrong order_type format";
+            if (!(is_array($fields) && count($fields) > 0)) $error = "Wrong field_view format";
+            if ($error !== false) throw new \Exception($error);
 
             $joinClause = "";
+            $tableAliases = [];
             foreach ($joins as $join) {
                 if (isset($join['table'], $join['on'])) {
+                    if (preg_match('/\s+AS\s+([a-zA-Z0-9_]+)$/i', $join['table'], $matches)) {
+                        $alias = $matches[1];
+                        $original = preg_replace('/\s+AS\s+[a-zA-Z0-9_]+$/i', '', $join['table']);
+                        $tableAliases[$original][] = $alias;
+                    } else {
+                        $original = $join['table'];
+                        $tableAliases[$original][] = $original;
+                    }
+
                     $joinClause .= " JOIN " . $join['table'] . " ON " . $join['on'] . " ";
                 }
             }
 
-            $sqlCount = "SELECT count({$this->baseClassTablename}.id) FROM " . $this->baseClassTablename  . " " . $joinClause;
-            #$sqlMaster = "SELECT * FROM " . $this->baseClassTablename . " " . $joinClause;
             $columns = $this->getColumnsFullName($this->baseClassTablename);
             $sqlMaster = "SELECT " . implode(", ", $columns) . " FROM " . $this->baseClassTablename . " " . $joinClause;
+
+            $sqlCount = "SELECT COUNT(*) AS total FROM (SELECT {$this->baseClassTablename}.id FROM " . $this->baseClassTablename . " " . $joinClause;
 
             $sql .= "WHERE ";
             $separator = " AND ";
             $count = 0;
-            if (count($fields) > 0) {
-                foreach ($fields as $field) {
-                    $field[0] = $this->baseClassTablename . "." . $field[0];
-                    if ($count > 0) {
-                        $sql .= $separator;
-                    }
-                    $field[1] = strtoupper($field[1]);
-                    switch ($field[1]) {
-                        case '<>':
-                        case '&LT;&GT;':
-                            if ($field[2] === null) {
-                                $sql .= $field[0] . " IS NOT NULL";
-                            } else {
-                                $sql .= $field[0] . " != '" . $field[2] . "'";
-                            }
-                            break;
-                        case 'LIKE':
-                            $sql .= $field[0] . " " . $field[1] . " '%" . $field[2] . "%'";
-                            break;
-                        case '=':
-                            if ($field[2] === null) {
-                                $sql .= $field[0] . " IS NULL";
-                            } else {
-                                $sql .= $field[0] . " = '" . $field[2] . "'";
-                            }
-                            break;
-                        case '<':
-                        case '&LT;':
-                            $sql .= $field[0] . " < '" . $field[2] . "'";
-                            break;
-                        case '<=':
-                        case '&LT;=':
-                            $sql .= $field[0] . " <= '" . $field[2] . "'";
-                            break;
-                        case '>':
-                        case '&GT;':
-                            $sql .= $field[0] . " > '" . $field[2] . "'";
-                            break;
-                        case '>=':
-                        case '&GT;=':
-                            $sql .= $field[0] . " >= '" . $field[2] . "'";
-                            break;
-                    }
-                    $count++;
+
+            foreach ($fields as $option) {
+                $field = $option[0];
+
+                if (!str_contains($field, '.')) {
+                    $field = "{$this->baseClassTablename}." . $field;
                 }
+
+                if ($count > 0) $sql .= $separator;
+                $op = strtoupper($option[1]);
+                $val = $option[2];
+
+                switch ($op) {
+                    case '<>':
+                    case '&LT;&GT;':
+                        $sql .= ($val === null) ? "$field IS NOT NULL" : "$field != " . $this->PDO->quote($val);
+                        break;
+                    case 'LIKE':
+                        $sql .= "$field LIKE " . $this->PDO->quote("%$val%");
+                        break;
+                    case '=':
+                        $sql .= ($val === null) ? "$field IS NULL" : "$field = " . $this->PDO->quote($val);
+                        break;
+                    case '<':
+                    case '&LT;':
+                        $sql .= "$field < " . $this->PDO->quote($val);
+                        break;
+                    case '<=':
+                    case '&LT;=':
+                        $sql .= "$field <= " . $this->PDO->quote($val);
+                        break;
+                    case '>':
+                    case '&GT;':
+                        $sql .= "$field > " . $this->PDO->quote($val);
+                        break;
+                    case '>=':
+                    case '&GT;=':
+                        $sql .= "$field >= " . $this->PDO->quote($val);
+                        break;
+                }
+                $count++;
             }
-            $q = $this->PDO->prepare($sqlCount . $sql);
+
+            if (!empty($groupBy)) {
+                if (is_string($groupBy)) {
+                    $groupBy = [$groupBy];
+                }
+                $groupByClean = array_map(fn($col) => str_contains($col, '.') ? $col : "{$this->baseClassTablename}.$col", $groupBy);
+                $sql .= " GROUP BY " . implode(", ", $groupByClean);
+            }
+
+            $q = $this->PDO->prepare($sqlCount . $sql . ") AS subquery");
             $q->execute();
             $result = $q->fetch();
-
-            $queryNumberResult = intval($result[0]);
+            $queryNumberResult = intval($result['total']);
 
             $maxPage = floor($queryNumberResult / $numitem) + 1;
             if ($currentPage > $maxPage) {
@@ -218,18 +226,20 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             }
 
             if ($orderColumn != "") {
-                $sql .= " ORDER BY " . $this->baseClassTablename . "." . $orderColumn;
-                if ($orderType !== "") {
+                $orderField = str_contains($orderColumn, '.') ? $orderColumn : "{$this->baseClassTablename}.$orderColumn";
+                $sql .= " ORDER BY " . $orderField;
+                if ($orderType != "") {
                     $sql .= " " . $orderType;
                 }
             }
-            if ($numitem != NULL) {
-                $lowerBound = $currentPage == 1 ? $currentPage - 1 : ($currentPage - 1) * $numitem;
+
+            if ($numitem !== null) {
+                $lowerBound = ($currentPage - 1) * $numitem;
                 $upperBound = $numitem;
                 $sql .= " LIMIT " . $lowerBound . "," . $upperBound;
             }
-            $q = $this->PDO->prepare($sqlMaster . $sql);
 
+            $q = $this->PDO->prepare($sqlMaster . $sql);
             $q->execute();
             $queryResults = $q->fetchAll(\PDO::FETCH_ASSOC);
             $this->fill($queryResults);
@@ -237,7 +247,141 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
             return $queryNumberResult;
         } catch (\PDOException $PDOEx) {
             Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database Exception. Please see log file.");
+        }
+    }
+
+
+    /**
+     * Returns the sum of the specified columns, with optional filters, joins, and group by.
+     * @param array $columns Columns to sum
+     * @param array|null $fields Optional filters (same format as in view())
+     * @param array $joins Optional join clauses (e.g., [['table' => 'other', 'on' => 'main.id = other.main_id']])
+     * @param array|string|null $groupBy Optional group by column(s)
+     * @return array
+     * @throws \Exception
+     */
+    public function sum(array $columns, ?array $fields = null, array $joins = [], array|string|null $groupBy = null): array
+    {
+        try {
+            if (empty($columns)) {
+                throw new \Exception("No columns specified for sum.");
+            }
+
+            $validColumns = $this->getColumns($this->baseClassTablename);
+
+            $joinClause = "";
+            $tableAliases = [];
+            foreach ($joins as $join) {
+                if (isset($join['table'], $join['on'])) {
+                    $joinClause .= " JOIN " . $join['table'] . " ON " . $join['on'] . " ";
+
+                    if (preg_match('/\s+AS\s+([a-zA-Z0-9_]+)$/i', $join['table'], $matches)) {
+                        $alias = $matches[1];
+                        $original = preg_replace('/\s+AS\s+[a-zA-Z0-9_]+$/i', '', $join['table']);
+                        $tableAliases[$original][] = $alias;
+                    } else {
+                        $original = $join['table'];
+                        $tableAliases[$original][] = $original;
+                    }
+                }
+            }
+
+            $columnsToSum = [];
+            foreach ($columns as $col) {
+                if (str_contains($col, '.')) {
+                    $aliasCol = $col;
+                    $label = str_replace('.', '_', $col);
+                } elseif (in_array($col, $validColumns)) {
+                    $aliasCol = "{$this->baseClassTablename}.{$col}";
+                    $label = $col;
+                } else {
+                    continue;
+                }
+
+                $columnsToSum[] = "SUM({$aliasCol}) AS `{$label}`";
+            }
+
+            if (empty($columnsToSum)) {
+                throw new \Exception("No valid columns to sum.");
+            }
+
+            $sql = "SELECT " . implode(", ", $columnsToSum) . " FROM `{$this->baseClassTablename}`" . $joinClause;
+
+            if (is_array($fields) && count($fields) > 0) {
+                $sql .= " WHERE ";
+                $count = 0;
+
+                foreach ($fields as $option) {
+                    $field = $option[0];
+                    $operator = strtoupper($option[1]);
+                    $value = $option[2];
+
+                    if (!str_contains($field, '.')) {
+                        $field = "{$this->baseClassTablename}.{$field}";
+                    }
+
+                    if ($count > 0) $sql .= " AND ";
+
+                    switch ($operator) {
+                        case '<>':
+                        case '&LT;&GT;':
+                            $sql .= ($value === null)
+                                ? "$field IS NOT NULL"
+                                : "$field != " . $this->PDO->quote($value);
+                            break;
+                        case '=':
+                            $sql .= ($value === null)
+                                ? "$field IS NULL"
+                                : "$field = " . $this->PDO->quote($value);
+                            break;
+                        case 'LIKE':
+                            $sql .= "$field LIKE " . $this->PDO->quote("%$value%");
+                            break;
+                        case '<':
+                        case '&LT;':
+                            $sql .= "$field < " . $this->PDO->quote($value);
+                            break;
+                        case '<=':
+                        case '&LT;=':
+                            $sql .= "$field <= " . $this->PDO->quote($value);
+                            break;
+                        case '>':
+                        case '&GT;':
+                            $sql .= "$field > " . $this->PDO->quote($value);
+                            break;
+                        case '>=':
+                        case '&GT;=':
+                            $sql .= "$field >= " . $this->PDO->quote($value);
+                            break;
+                        default:
+                            throw new \Exception("Invalid operator '$operator' in filters.");
+                    }
+
+                    $count++;
+                }
+            }
+
+            if (!empty($groupBy)) {
+                if (is_string($groupBy)) {
+                    $groupBy = [$groupBy];
+                }
+
+                $groupByClean = [];
+                foreach ($groupBy as $col) {
+                    $groupByClean[] = str_contains($col, '.') ? $col : "{$this->baseClassTablename}.{$col}";
+                }
+
+                $sql .= " GROUP BY " . implode(", ", $groupByClean);
+            }
+
+            $q = $this->PDO->prepare($sql);
+            $q->execute();
+
+            return $q->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $PDOEx) {
+            Logger::write($PDOEx->getMessage(), Log_Level::ERROR, Log_Driver::FILE);
+            throw new \PDOException("Database Exception. Please see log file.");
         }
     }
 
