@@ -95,19 +95,43 @@ class Request
         return $current;
     }
 
-
     /**
      * Registers request data from global variables.
      */
-    private static function registerFromGlobals(): void
+    private static function registerFromGlobals()
     {
-        self::$query = $_GET;
-        self::$post = $_POST;
-        self::$server = $_SERVER;
+        self::$query   = $_GET;
+        self::$post    = $_POST;
+        self::$server  = $_SERVER;
         self::$request = $_REQUEST;
-        self::$files = $_FILES;
-        self::$cookie = $_COOKIE;
-        self::$headers = getallheaders();
+        self::$files   = $_FILES;
+        self::$cookie  = $_COOKIE;
+        self::$headers = self::extractHeaders();
+    }
+
+    /**
+     * Extracts HTTP headers from $_SERVER in a portable and case-insensitive way (compatible with Apache, Nginx, and CLI).
+     *
+     * @return array
+     */
+    private static function extractHeaders(): array
+    {
+        $headers = [];
+
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+        } else {
+            foreach ($_SERVER as $name => $value) {
+                if (str_starts_with($name, 'HTTP_')) {
+                    $key = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
+                    $headers[$key] = $value;
+                } elseif (in_array($name, ['CONTENT_TYPE', 'CONTENT_LENGTH', 'CONTENT_MD5'])) {
+                    $key = str_replace('_', '-', ucwords(strtolower($name)));
+                    $headers[$key] = $value;
+                }
+            }
+        }
+        return array_change_key_case($headers, CASE_LOWER);
     }
 
     /**

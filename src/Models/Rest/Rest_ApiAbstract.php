@@ -1,5 +1,7 @@
 <?php
+
 namespace Boostack\Models\Rest;
+
 use Boostack\Models\Utils\Utils;
 use Boostack\Models\Request;
 use Boostack\Models\StatusCodes;
@@ -114,16 +116,16 @@ abstract class Rest_ApiAbstract
             $namespace = Config::get("api_my_extended_namespace");
             $declaredClasses = [];
             $this->getDirContents($dir, $declaredClasses);
-        
+
             foreach ($declaredClasses as $class) {
-                $classReflection = new \ReflectionClass($namespace.$class);
+                $classReflection = new \ReflectionClass($namespace . $class);
                 if ($classReflection->isSubclassOf('\Boostack\Models\Rest\Rest_ApiAbstract')) {
                     $subclasses[] = $class;
                 }
             }
 
             foreach ($subclasses as $subclass) {
-                $subclass = new \ReflectionClass($namespace.$subclass);
+                $subclass = new \ReflectionClass($namespace . $subclass);
                 $methods = $subclass->getMethods(\ReflectionMethod::IS_PROTECTED);
                 foreach ($methods as $method) {
                     $methodBindings[$method->name] = $method->class;
@@ -196,8 +198,13 @@ abstract class Rest_ApiAbstract
      * @param $method
      * @throws \Exception
      */
-    protected function constraints($method, $currentUserIsLogged = false, ?array $headers = null, ?array $serverParams = null, bool $fileIsJSON = true)
-    {
+    protected function constraints(
+        string $method,
+        bool $currentUserIsLogged = false,
+        ?array $headers = null,
+        ?array $serverParams = null,
+        bool $fileIsJSON = true
+    ) {
         if (strcasecmp($this->method, $method) !== 0) {
             throw new \Exception("Only accepts $method requests.");
         }
@@ -206,47 +213,29 @@ abstract class Rest_ApiAbstract
             throw new \Exception("Only accepts requests from already logged in user.");
         }
 
-        if ($serverParams !== null && $serverParams !== []) {
+        // Server params
+        if (!empty($serverParams)) {
             foreach ($serverParams as $key => $value) {
                 if (!Request::hasServerParam($key)) {
                     throw new \Exception("Server param '$key' must be set.");
                 }
-
-                if ($value === "*") {
-                    continue;
-                }
-
-                if (strcasecmp(Request::getServerParam($key), $value) !== 0) {
+                if ($value !== "*" && strcasecmp(Request::getServerParam($key), $value) !== 0) {
                     throw new \Exception("Server param '$key' must be set to: $value");
                 }
             }
         }
 
-        if ($headers !== null && $headers !== []) {
+        // Header params
+        if (!empty($headers)) {
             foreach ($headers as $key => $value) {
-                if ($key == "Content-Type") {
-                    if (!Request::hasServerParam("CONTENT_TYPE")) {
-                        throw new \Exception("Header param Content-Type must be set.");
-                    }
-                    if ($value === "*") {
-                        continue;
-                    }
-                    if (strcasecmp(Request::getServerParam("CONTENT_TYPE"), $value) !== 0) {
-                        throw new \Exception("Server param Content-Type must be set to: $value");
-                    }
-                    continue;
+                $keyLower = strtolower($key);
+
+                if (!Request::hasHeaderParam($keyLower)) {
+                    throw new \Exception("Header '$key' must be set.");
                 }
 
-                if (!Request::hasHeaderParam($key)) {
-                    throw new \Exception("Header param '$key' must be set.");
-                }
-
-                if ($value === "*") {
-                    continue;
-                }
-
-                if (strcasecmp(Request::getHeaderParam($key), $value) !== 0) {
-                    throw new \Exception("Header param '$key' must be set to: $value");
+                if ($value !== "*" && strcasecmp(Request::getHeaderParam($keyLower), $value) !== 0) {
+                    throw new \Exception("Header '$key' must be set to: $value");
                 }
             }
         }
@@ -270,8 +259,7 @@ abstract class Rest_ApiAbstract
             $path = realpath($dir . DIRECTORY_SEPARATOR . $file);
             if (!is_dir($path)) {
                 $results[] = basename($path, ".php");
-            } 
-            elseif ($file !== "." && $file !== "..") {
+            } elseif ($file !== "." && $file !== "..") {
                 $this->getDirContents($path, $results);
             }
         }
