@@ -566,22 +566,25 @@ abstract class BaseClass implements \JsonSerializable
     public function getFields()
     {
         $query = "
-        SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+        SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE 
         FROM INFORMATION_SCHEMA.COLUMNS 
         WHERE TABLE_NAME = :tableName 
-        AND TABLE_SCHEMA = :tableSchema
-        ";
+        AND TABLE_SCHEMA = :tableSchema";
         $stmt = $this->PDO->prepare($query);
-        $stmt->execute(['tableName' => static::TABLENAME, 'tableSchema' => Config::get("db_name")]);
+        $stmt->execute([
+            'tableName' => static::TABLENAME,
+            'tableSchema' => Config::get("db_name")
+        ]);
         $columns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         $ids = (empty($this->id)) ? " WHERE id=1" : " WHERE id=" . $this->id;
         $query = "SELECT * FROM " . static::TABLENAME . $ids;
         $stmt = $this->PDO->query($query);
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
         $resultArray = [];
         if ($data == null || count($data) == 0) {
-            $data = array(0);
+            $data = [0];
         }
 
         foreach ($data as $row) {
@@ -591,23 +594,21 @@ abstract class BaseClass implements \JsonSerializable
                 $columnType = $column['COLUMN_TYPE'];
                 $datatype = $column['DATA_TYPE'];
                 $maxLength = $column['CHARACTER_MAXIMUM_LENGTH'];
+                $isNullable = $column['IS_NULLABLE'];
+
+                $fieldData = [
+                    'data_type' => $datatype,
+                    'column_type' => $columnType,
+                    'max_length' => $maxLength,
+                    'is_nullable' => $isNullable,
+                    'foreign' => null
+                ];
 
                 if (!empty($this->id)) {
-                    $record[$columnName] = [
-                        'value' => $row[$columnName],
-                        'data_type' => $datatype,
-                        'column_type' => $columnType,
-                        'max_length' => $maxLength,
-                        'foreign' => null
-                    ];
-                } else {
-                    $record[$columnName] = [
-                        'data_type' => $datatype,
-                        'column_type' => $columnType,
-                        'max_length' => $maxLength,
-                        'foreign' => null
-                    ];
+                    $fieldData['value'] = $row[$columnName];
                 }
+
+                $record[$columnName] = $fieldData;
 
                 $foreignKeysQuery = "
                 SELECT 
@@ -622,9 +623,11 @@ abstract class BaseClass implements \JsonSerializable
                     AND COLUMN_NAME = :columnName 
                     AND CONSTRAINT_NAME != 'PRIMARY'
             ";
-
                 $stmt = $this->PDO->prepare($foreignKeysQuery);
-                $stmt->execute(['tableName' => static::TABLENAME, 'columnName' => $columnName]);
+                $stmt->execute([
+                    'tableName' => static::TABLENAME,
+                    'columnName' => $columnName
+                ]);
                 $foreignKeys = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
                 if (!empty($foreignKeys)) {
