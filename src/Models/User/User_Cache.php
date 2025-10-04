@@ -50,7 +50,7 @@ class User_Cache
         $PDO = Database_PDO::getInstance();
         $sql = "SELECT * FROM " . static::TABLENAME . " WHERE `id_user` = :id_user AND `key` = :key";
         $stmt = $PDO->prepare($sql);
-        $stmt->bindParam(":id_user", Session::getUserObject()->id);
+        $stmt->bindValue(":id_user", Session::getUserObject()->id, \PDO::PARAM_INT);
         $stmt->bindParam(":key", $hashedKey);
         try {
             $stmt->execute();
@@ -81,7 +81,7 @@ class User_Cache
             $PDO = Database_PDO::getInstance();
             $sql = "INSERT INTO " . static::TABLENAME . " (`id_user`, `key`, `key_plain`, `value`, `created_at`, `last_update`) VALUES (:id_user, :key, :key_plain, :value, :created_at, :last_update)";
             $q = $PDO->prepare($sql);
-            $q->bindValue(':id_user', Session::getUserObject()->id);
+            $q->bindValue(":id_user", Session::getUserObject()->id, \PDO::PARAM_INT);
             $q->bindValue(':key', $hashedKey);
             $q->bindValue(':key_plain', Request::sanitizeInput($key));
             $q->bindValue(':value', json_encode($value));
@@ -111,7 +111,7 @@ class User_Cache
         $PDO = Database_PDO::getInstance();
         $sql = "UPDATE " . static::TABLENAME . " SET `value` = :value, `key_plain` = :key_plain,  `last_update` = :last_update WHERE `id_user` = :id_user AND `key` = :key";
         $q = $PDO->prepare($sql);
-        $q->bindValue(':id_user', Session::getUserObject()->id);
+        $q->bindValue(":id_user", Session::getUserObject()->id, \PDO::PARAM_INT);
         $q->bindValue(':key', $hashedKey);
         $q->bindValue(':key_plain', Request::sanitizeInput($key));
         $q->bindValue(':value', json_encode($value));
@@ -138,7 +138,7 @@ class User_Cache
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME . " WHERE `id_user` = :id_user AND `key` = :key";
         $stmt = $PDO->prepare($sql);
-        $stmt->bindValue(':id_user', Session::getUserObject()->id);
+        $stmt->bindValue(":id_user", Session::getUserObject()->id, \PDO::PARAM_INT);
         $stmt->bindParam(':key', $hashedKey);
         try {
             $stmt->execute();
@@ -160,7 +160,7 @@ class User_Cache
         $PDO = Database_PDO::getInstance();
         $sql = "DELETE FROM " . static::TABLENAME . " WHERE `id_user` = :id_user";
         $stmt = $PDO->prepare($sql);
-        $stmt->bindValue(':id_user', Session::getUserObject()->id);
+        $stmt->bindValue(":id_user", Session::getUserObject()->id, \PDO::PARAM_INT);
         try {
             $stmt->execute();
         } catch (\Exception $e) {
