@@ -1,0 +1,183 @@
+<?php
+
+namespace Boostack\Models\User;
+
+use Boostack\Models\Config;
+use Boostack\Models\Database\Database_PDO;
+use Boostack\Models\Log\Log_Driver;
+use Boostack\Models\Log\Log_Level;
+use Boostack\Models\Log\Logger;
+use Boostack\Models\Request;
+use Boostack\Models\Session\Session;
+
+/**
+ * Boostack: User_Cache.php
+ * ========================================================================
+ * Copyright 2014-2025 Spagnolo Stefano
+ * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
+ * ========================================================================
+ * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
+ * @version 6.4
+ */
+class User_Cache
+{
+    const TABLENAME = "boostack_user_cache";
+    const ALGO = "sha1";
+
+    /**
+     * Checks if the cache contains the specified key.
+     *
+     * @param string $key The key to check.
+     * @return bool True if the key exists in the cache, false otherwise.
+     */
+    public static function has($key)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $result = self::get($key);
+        return $result !== false;
+    }
+
+    /**
+     * Retrieves the value associated with the specified key from the cache.
+     *
+     * @param string $key The key to retrieve the value for.
+     * @return mixed|false The value associated with the key if found, or false if the key does not exist.
+     */
+    public static function get($key)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $hashedKey = self::hashKey($key);
+        $PDO = Database_PDO::getInstance();
+        $sql = "SELECT * FROM " . static::TABLENAME . " WHERE `id_user` = :id_user AND `key` = :key";
+        $stmt = $PDO->prepare($sql);
+        $stmt->bindParam(":id_user", Session::getUserObject()->id);
+        $stmt->bindParam(":key", $hashedKey);
+        try {
+            $stmt->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+        }
+        if (!$stmt->execute() || $stmt->rowCount() !== 1) {
+            return false;
+        }
+        $results = $stmt->fetch(\PDO::FETCH_OBJ);
+        return json_decode($results->value, true);
+    }
+
+    /**
+     * Sets a key-value pair in the cache.
+     *
+     * @param string $key The key to set.
+     * @param mixed $value The value to associate with the key.
+     * @return bool True if the operation was successful, false otherwise.
+     */
+    public static function set($key, $value)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        if (self::has($key)) return self::update($key, $value);
+        try {
+            $currentTime = date('Y-m-d H:i:s', time());
+            $hashedKey = self::hashKey($key);
+            $PDO = Database_PDO::getInstance();
+            $sql = "INSERT INTO " . static::TABLENAME . " (`id_user`, `key`, `key_plain`, `value`, `created_at`, `last_update`) VALUES (:id_user, :key, :key_plain, :value, :created_at, :last_update)";
+            $q = $PDO->prepare($sql);
+            $q->bindValue(':id_user', Session::getUserObject()->id);
+            $q->bindValue(':key', $hashedKey);
+            $q->bindValue(':key_plain', Request::sanitizeInput($key));
+            $q->bindValue(':value', json_encode($value));
+            $q->bindValue(':created_at', $currentTime);
+            $q->bindValue(':last_update', $currentTime);
+            $q->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::BOTH);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Updates the value associated with the specified key in the cache.
+     *
+     * @param string $key The key to update.
+     * @param mixed $value The new value to associate with the key.
+     * @return bool True if the update operation was successful, false otherwise.
+     */
+    public static function update($key, $value)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        if (!self::has($key)) return self::set($key, $value);
+        $currentTime = date('Y-m-d H:i:s', time());
+        $hashedKey = self::hashKey($key);
+        $PDO = Database_PDO::getInstance();
+        $sql = "UPDATE " . static::TABLENAME . " SET `value` = :value, `key_plain` = :key_plain,  `last_update` = :last_update WHERE `id_user` = :id_user AND `key` = :key";
+        $q = $PDO->prepare($sql);
+        $q->bindValue(':id_user', Session::getUserObject()->id);
+        $q->bindValue(':key', $hashedKey);
+        $q->bindValue(':key_plain', Request::sanitizeInput($key));
+        $q->bindValue(':value', json_encode($value));
+        $q->bindValue(':last_update', $currentTime);
+        try {
+            $q->execute();
+        } catch (\Exception $e) {
+            Logger::write($sql, Log_Level::WARNING, Log_Driver::DATABASE);
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+        }
+        return true;
+    }
+
+    /**
+     * Deletes a single entry from the cache table by key.
+     *
+     * @param string $key The key to delete.
+     * @return bool True if the operation was successful, false otherwise.
+     */
+    public static function delete($key)
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $hashedKey = self::hashKey($key);
+        $PDO = Database_PDO::getInstance();
+        $sql = "DELETE FROM " . static::TABLENAME . " WHERE `id_user` = :id_user AND `key` = :key";
+        $stmt = $PDO->prepare($sql);
+        $stmt->bindValue(':id_user', Session::getUserObject()->id);
+        $stmt->bindParam(':key', $hashedKey);
+        try {
+            $stmt->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+            return false;
+        }
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Clears all entries from the cache table.
+     *
+     * @return bool True if the operation was successful, false otherwise.
+     */
+    public static function clearAll()
+    {
+        if (!Config::get("cache_enabled")) return false;
+        $PDO = Database_PDO::getInstance();
+        $sql = "DELETE FROM " . static::TABLENAME . " WHERE `id_user` = :id_user";
+        $stmt = $PDO->prepare($sql);
+        $stmt->bindValue(':id_user', Session::getUserObject()->id);
+        try {
+            $stmt->execute();
+        } catch (\Exception $e) {
+            Logger::write($e, Log_Level::WARNING, Log_Driver::DATABASE);
+            return false;
+        }
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Generates a hashed representation of the cache key using the specified algorithm.
+     *
+     * @param string $key The key to hash.
+     * @return string The hashed representation of the key.
+     */
+    private static function hashKey($key)
+    {
+        return hash(self::ALGO, $key);
+    }
+}
