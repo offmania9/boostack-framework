@@ -104,7 +104,13 @@ abstract class View
         } else {
             $minified = Config::get('developmentMode') ? "" : ".min";
             $fileName = str_replace(".js", $minified . ".js", $file);
-            echo '<script type="text/javascript" src="' . Config::get('url') . Config::get('js_path') . $fileName . '"></script>';
+            $url = Config::get('url') . Config::get('js_path') . $fileName;
+            $assetVersion = Config::get('assets_version');
+            if (!empty($assetVersion)) {
+                $separator = (strpos($url, '?') === false) ? '?' : '&';
+                $url .= $separator . 'v=' . $assetVersion;
+            }
+            echo '<script type="text/javascript" src="' . $url . '"></script>';
         }
     }
 
@@ -208,7 +214,13 @@ abstract class View
         } else {
             $minified = Config::get('developmentMode') ? "" : ".min";
             $fileName = str_replace(".css", $minified . ".css", $file);
-            echo '<link href="' . Config::get('url') . Config::get('css_path') . $fileName . '" rel="stylesheet" type="text/css"/>';
+            $url = Config::get('url') . Config::get('css_path') . $fileName;
+            $assetVersion = Config::get('assets_version');
+            if (!empty($assetVersion)) {
+                $separator = (strpos($url, '?') === false) ? '?' : '&';
+                $url .= $separator . 'v=' . $assetVersion;
+            }
+            echo '<link href="' . $url . '" rel="stylesheet" type="text/css"/>';
         }
     }
 
