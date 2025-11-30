@@ -509,7 +509,7 @@ class Auth
             throw new \Exception("Current User must be logged in.");
         }
 
-        return $currentUser && isset($currentUser->privilege) && $currentUser->privilege <= $privilegeLevel;
+        return $currentUser !== null && $currentUser->privilege !== null && $currentUser->privilege <= $privilegeLevel;
     }
 
     /**
