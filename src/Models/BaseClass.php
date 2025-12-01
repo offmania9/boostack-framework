@@ -366,6 +366,15 @@ abstract class BaseClass implements \JsonSerializable
     }
 
     /**
+     * Default payload for versioning: export every instance variable except
+     * the system/custom excluded ones.
+     */
+    public function getVersionData(): array
+    {
+        return (array)$this->jsonSerialize();
+    }
+
+    /**
      * Lock the table for read and write operations.
      */
     public function lockTable(): void
