@@ -434,7 +434,8 @@ abstract class BaseClass implements \JsonSerializable
             if (in_array($defaultValueKey, $inputKeys)) {
                 $this->{$defaultValueKey} = $array[$defaultValueKey];
             } else {
-                $this->{$defaultValueKey} = $this->default_values[$defaultValueKey];
+                if (empty($this->{$defaultValueKey}) && $this->default_values[$defaultValueKey] !== null)
+                    $this->{$defaultValueKey} = $this->default_values[$defaultValueKey];
             }
         }
     }

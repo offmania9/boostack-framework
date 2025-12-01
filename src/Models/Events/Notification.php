@@ -51,50 +51,58 @@ class Notification extends BaseClassTraced
      *
      * @param array $to_user_ids An array of user IDs to send the notification to.
      * @return Notification The current instance of the Notification.
-     * @throws Exception If the user IDs array is empty or if message/email content is missing.
+     * @throws Exception If message/email content is missing.
      */
     public function enqueue(array $to_user_ids): Notification
     {
-        if (count($to_user_ids) > 0) {
-            $this->save();
-            if ($this->type == NotificationType::WEB || $this->type == NotificationType::ALL) {
-                if (empty($this->message_content)) {
-                    throw new \Exception("Notification Web Error: message_content is empty. Use Notification setMessageContent function");
-                }
-                foreach ($to_user_ids as $to_user_id) {
-                    $not = new NotificationWeb();
-                    $not->id_notification = $this->id;
-                    $not->id_user_to = $to_user_id;
-                    $not->status = 'pending';
-                    $not->json_object = $this->json_object;
-                    $not->message_content = $this->message_content;
-                    $not->save();
-                }
+        $to_user_ids = array_values(array_unique(array_filter(
+            array_map('intval', $to_user_ids),
+            static function ($id) {
+                return $id > 0;
             }
-            if ($this->type == NotificationType::EMAIL || $this->type == NotificationType::ALL) {
-                if (empty($this->email_content)) {
-                    throw new \Exception("Notification Web Error: email_content is empty. Use Notification setEmailContent function");
-                }
-                foreach ($to_user_ids as $to_user_id) {
-                    $user = new \Boostack\Models\User\User($to_user_id);
-                    $not = new NotificationEmail();
-                    $not->id_notification = $this->id;
-                    $not->id_user_to = $to_user_id;
-                    $not->email_to = $user->email;
-                    $not->status = 'pending';
-                    $not->json_object = $this->json_object;
-                    $not->email_content = $this->email_content;
-                    $not->retries = 0;
-                    $not->max_retries = Config::get("notification_email_max_retries") == -1 ? NULL : Config::get("notification_email_max_retries");
-                    $not->sent_at = $this->send_date;
-                    $not->save();
-                }
-            }
-            Logger::write("Notification with ID: " . $this->id . " sended in database", Log_Level::INFORMATION);
+        )));
+
+        if (count($to_user_ids) === 0) {
+            Logger::write("Notification skipped: no recipient ids provided", Log_Level::WARNING);
             return $this;
-        } else {
-            throw new \Exception("send notification Error: user ids array is empty");
         }
+
+        $this->save();
+        if ($this->type == NotificationType::WEB || $this->type == NotificationType::ALL) {
+            if (empty($this->message_content)) {
+                throw new \Exception("Notification Web Error: message_content is empty. Use Notification setMessageContent function");
+            }
+            foreach ($to_user_ids as $to_user_id) {
+                $not = new NotificationWeb();
+                $not->id_notification = $this->id;
+                $not->id_user_to = $to_user_id;
+                $not->status = 'pending';
+                $not->json_object = $this->json_object;
+                $not->message_content = $this->message_content;
+                $not->save();
+            }
+        }
+        if ($this->type == NotificationType::EMAIL || $this->type == NotificationType::ALL) {
+            if (empty($this->email_content)) {
+                throw new \Exception("Notification Web Error: email_content is empty. Use Notification setEmailContent function");
+            }
+            foreach ($to_user_ids as $to_user_id) {
+                $user = new \Boostack\Models\User\User($to_user_id);
+                $not = new NotificationEmail();
+                $not->id_notification = $this->id;
+                $not->id_user_to = $to_user_id;
+                $not->email_to = $user->email;
+                $not->status = 'pending';
+                $not->json_object = $this->json_object;
+                $not->email_content = $this->email_content;
+                $not->retries = 0;
+                $not->max_retries = Config::get("notification_email_max_retries") == -1 ? NULL : Config::get("notification_email_max_retries");
+                $not->sent_at = $this->send_date;
+                $not->save();
+            }
+        }
+        Logger::write("Notification with ID: " . $this->id . " sended in database", Log_Level::INFORMATION);
+        return $this;
     }
 
     // public function send()
