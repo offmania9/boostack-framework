@@ -76,6 +76,55 @@ class Utils
         return number_format($number, $decimals, ",", ".");
     }
 
+    /**
+     * Formats a date based on language-specific patterns (e.g. SQL date to Italian dd/mm/yyyy).
+     *
+     * @param string|\DateTimeInterface|null $date The input date string (Y-m-d or Y-m-d H:i:s) or DateTime instance.
+     * @param string $language Language code (e.g., "it", "en"). Defaults to Italian.
+     * @return string The formatted date. Returns "-" if input is empty or invalid.
+     */
+    public static function formatDate($date, string $language = 'it'): string
+    {
+        if (empty($date)) {
+            return "-";
+        }
+
+        if ($date instanceof \DateTimeInterface) {
+            $dateTime = $date;
+        } else {
+            $dateTime = null;
+            $inputFormats = ['Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d'];
+            foreach ($inputFormats as $format) {
+                $dateTime = \DateTime::createFromFormat($format, (string)$date);
+                if ($dateTime !== false) {
+                    break;
+                }
+            }
+
+            if ($dateTime === false || $dateTime === null) {
+                try {
+                    $dateTime = new \DateTime((string)$date);
+                } catch (\Exception $e) {
+                    return "-";
+                }
+            }
+        }
+
+        $languageKey = strtolower(str_replace('-', '_', $language));
+        $formats = [
+            'it' => 'd/m/Y',
+            'en' => 'm/d/Y',
+            'en_us' => 'm/d/Y',
+            'en_gb' => 'd/m/Y',
+            'fr' => 'd/m/Y',
+            'de' => 'd.m.Y',
+        ];
+
+        $outputFormat = $formats[$languageKey] ?? 'Y-m-d';
+
+        return $dateTime->format($outputFormat);
+    }
+
 
     /**
      * Removes accents from a string.
