@@ -35,6 +35,9 @@ class User_Entity extends \Boostack\Models\BaseClass
 
     protected $pic_square;
 
+    protected $passkey_enabled;
+    protected $passkey_prompt_disabled;
+
     /**
      *
      */
@@ -53,6 +56,8 @@ class User_Entity extends \Boostack\Models\BaseClass
         "last_access" => 0,
         "session_cookie" => "",
         "pic_square" => "",
+        "passkey_enabled" => 0,
+        "passkey_prompt_disabled" => 0,
     ];
 
     /**
