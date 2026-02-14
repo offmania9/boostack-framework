@@ -43,6 +43,14 @@ abstract class BaseClass implements \JsonSerializable
     const TABLENAME = "";
 
     /**
+     * Normalize exception codes to integer (PDO may return SQLSTATE strings).
+     */
+    private static function normalizeExceptionCode($code): int
+    {
+        return is_numeric($code) ? (int)$code : 0;
+    }
+
+    /**
      * Initialize the object by creating the \PDO object.
      * Call this method in your __construct() function with parent::init()
      *
@@ -112,7 +120,7 @@ abstract class BaseClass implements \JsonSerializable
             return true;
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 
@@ -137,7 +145,7 @@ abstract class BaseClass implements \JsonSerializable
             return !empty($result);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 
@@ -161,7 +169,7 @@ abstract class BaseClass implements \JsonSerializable
             }
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 
@@ -231,7 +239,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 
@@ -251,7 +259,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 
@@ -271,7 +279,7 @@ abstract class BaseClass implements \JsonSerializable
             return ($q->rowCount() > 0);
         } catch (\PDOException $PDOEx) {
             Log\Logger::write($PDOEx);
-            throw new \PDOException("Database \Exception. Please see log file.", $PDOEx->getCode(), $PDOEx);
+            throw new \PDOException("Database \Exception. Please see log file.", self::normalizeExceptionCode($PDOEx->getCode()), $PDOEx);
         }
     }
 

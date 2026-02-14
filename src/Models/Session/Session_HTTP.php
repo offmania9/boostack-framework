@@ -555,7 +555,7 @@ class Session_HTTP
         }
 
         if ($timespan !== null && is_int($timespan) && $decodedToken_timestamp + $timespan < time()) {
-            d(self::getRequestInfo(), $decodedToken_requestInfo, "rre");
+            //d(self::getRequestInfo(), $decodedToken_requestInfo, "rre");
             Logger::write("Attention! CSRF token has expired.", Log_Level::USER, Log_Driver::FILE);
             if ($throwException) {
                 throw new \Exception('Attention! CSRF token has expired.');

@@ -106,6 +106,18 @@ abstract class BaseClassTraced extends \Boostack\Models\BaseClass
     public function setLastAccess()
     {
         $this->last_access = date('Y-m-d H:i:s', time());
-        return parent::save();
+        try {
+            return parent::save();
+        } catch (\PDOException $e) {
+            $sqlState = (string)$e->getCode();
+            $previous = $e->getPrevious();
+            if ($previous instanceof \PDOException) {
+                $sqlState = (string)$previous->getCode();
+            }
+            if ($sqlState === '42S22') {
+                return false;
+            }
+            throw $e;
+        }
     }
 }
