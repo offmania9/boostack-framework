@@ -8,6 +8,9 @@ use Boostack\Models\StatusCodes;
 use Boostack\Models\Config;
 use Boostack\Models\MessageBag;
 use Boostack\Models\Auth;
+use Boostack\Models\Log\Logger;
+use Boostack\Models\Log\Log_Level;
+use Boostack\Exceptions\Exception_Validation;
 
 /**
  * Boostack: Rest_Api_Abstract.php
@@ -105,6 +108,10 @@ abstract class Rest_ApiAbstract
      */
     public function processAPI()
     {
+        $startedAt = microtime(true);
+        $requestId = $this->generateRequestId();
+        header('X-Request-Id: ' . $requestId);
+
         try {
             if (!Request::checkAcceptedTimeFromLastRequest()) {
                 throw new \Boostack\Exceptions\Exception_APITooManyRequests("Too many requests. Please wait a few seconds.");
@@ -138,7 +145,11 @@ abstract class Rest_ApiAbstract
                 $this->trackRequest();
                 $this->apiRequest->save();
                 $this->messageBag->data = $classInstance->{$this->endpoint}($this->args);
-                $this->messageBag->code = StatusCodes::HTTP_OK;
+                if (empty($this->messageBag->code)) {
+                    $this->messageBag->code = $this->messageBag->error
+                        ? StatusCodes::HTTP_BAD_REQUEST
+                        : StatusCodes::HTTP_OK;
+                }
             } else {
                 throw new \Boostack\Exceptions\Exception_APINotFound("No Endpoint: " . $this->endpoint . ". The resource you requested doesn't exist. For more info, please refer to the documentation.");
             }
@@ -146,11 +157,18 @@ abstract class Rest_ApiAbstract
             $this->_setErrorMessageObject("API Too many requests", StatusCodes::HTTP_TOO_MANY_REQUEST, $e->getMessage());
         } catch (\Boostack\Exceptions\Exception_APINotFound $e) {
             $this->_setErrorMessageObject("API not found", StatusCodes::HTTP_NOT_FOUND, $e->getMessage());
+        } catch (Exception_Validation $e) {
+            $code = (int) $e->getCode();
+            if ($code < 400 || $code > 599) {
+                $code = StatusCodes::HTTP_BAD_REQUEST;
+            }
+            $this->_setErrorMessageObject("Validation error", $code, $e->getMessage());
         } catch (\Exception $e) {
             $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
         } finally {
             $this->trackRequest();
             $this->apiRequest->save();
+            $this->logApiExecution($startedAt, $requestId);
         }
 
         header(StatusCodes::getHttpHeaderFor($this->messageBag->code));
@@ -190,6 +208,100 @@ abstract class Rest_ApiAbstract
         $this->apiRequest->message = $this->messageBag->message;
 
         $this->apiRequest->output = static::$outputNoLogged ? "no-logged" : json_encode($this->messageBag->data);
+    }
+
+    /**
+     * Emit a structured API log enriched with status code, duration and request id.
+     */
+    private function logApiExecution(float $startedAt, string $requestId): void
+    {
+        $statusCode = (int) ($this->messageBag->code ?? StatusCodes::HTTP_INTERNAL_SERVER_ERROR);
+        if ($statusCode <= 0) {
+            $statusCode = StatusCodes::HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $level = $this->resolveLogLevelFromStatus($statusCode);
+        $actionTag = $this->resolveActionTag();
+        $message = $this->messageBag->message ?: ('API endpoint: ' . $this->endpoint);
+
+        Logger::write([
+            'message' => $message,
+            'context' => [
+                'action_tag' => $actionTag,
+                'module' => 'API',
+                'module_key' => 'api',
+                'navigation_key' => $this->endpoint ?: 'api',
+                'route' => Request::getServerParam('REQUEST_URI'),
+                'endpoint' => $this->endpoint,
+                'method' => $this->method,
+                'status_code' => $statusCode,
+                'duration_ms' => $durationMs,
+                'request_id' => $requestId,
+                'is_api' => 1,
+            ],
+        ], $level);
+    }
+
+    private function resolveLogLevelFromStatus(int $statusCode): string
+    {
+        if ($statusCode >= 500) {
+            return Log_Level::ERROR;
+        }
+        if ($statusCode >= 400) {
+            return Log_Level::WARNING;
+        }
+        return Log_Level::USER;
+    }
+
+    private function resolveActionTag(): string
+    {
+        $method = strtoupper((string) $this->method);
+        $probe = strtolower(trim($this->endpoint . ' ' . $this->verb));
+        $action = Request::hasPostParam('action') ? strtolower(trim((string) Request::getPostParam('action'))) : '';
+        if ($action !== '') {
+            $probe .= ' ' . $action;
+        }
+
+        if (strpos($probe, 'import') !== false) {
+            return 'import';
+        }
+        if (strpos($probe, 'export') !== false) {
+            return 'export';
+        }
+        if (strpos($probe, 'search') !== false || strpos($probe, 'filter') !== false || strpos($probe, 'find') !== false || strpos($probe, 'lookup') !== false) {
+            return 'search';
+        }
+        if ($method === 'DELETE' || strpos($probe, 'delete') !== false || strpos($probe, 'remove') !== false) {
+            return 'delete';
+        }
+        if ($method === 'PATCH' || $method === 'PUT' || strpos($probe, 'update') !== false || strpos($probe, 'edit') !== false || strpos($probe, 'save') !== false) {
+            return 'update';
+        }
+        if ($method === 'POST' && (strpos($probe, 'create') !== false || strpos($probe, 'new') !== false || strpos($probe, 'add') !== false || strpos($probe, 'plan') !== false)) {
+            return 'create';
+        }
+        if ($method === 'GET' && (strpos($probe, 'list') !== false || strpos($probe, 'all') !== false)) {
+            return 'list';
+        }
+        if ($statusCode = (int) ($this->messageBag->code ?? 0)) {
+            if ($statusCode >= 500) {
+                return 'error';
+            }
+            if ($statusCode >= 400) {
+                return 'warning';
+            }
+        }
+        return 'api_call';
+    }
+
+    private function generateRequestId(): string
+    {
+        try {
+            return bin2hex(random_bytes(8));
+        } catch (\Throwable) {
+            return uniqid('api_', true);
+        }
     }
 
     /**
