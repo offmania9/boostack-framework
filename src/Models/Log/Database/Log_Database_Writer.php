@@ -1,5 +1,4 @@
 <?php
-
 namespace Boostack\Models\Log\Database;
 
 use Boostack\Models\Database\Database_PDO;
@@ -72,6 +71,8 @@ class Log_Database_Writer
     {
         if (self::$logDatabaseWriter == NULL) {
             self::$logDatabaseWriter = new Log_Database_Writer($objUser);
+        } else {
+            self::$logDatabaseWriter->refreshRuntimeContext($objUser);
         }
         return self::$logDatabaseWriter;
     }
@@ -84,12 +85,7 @@ class Log_Database_Writer
     private function __construct($objUser = NULL)
     {
         $this->pdo = Database_PDO::getInstance();
-        $this->username = (is_null($objUser)) ? "Anonymous" : $objUser->id;
-        $this->ip = Request::getIpAddress();
-        $this->useragent = Request::sanitizeInput(getenv('HTTP_USER_AGENT'));
-        $this->referrer = Request::hasServerParam("HTTP_REFERER") ? Request::getServerParam("HTTP_REFERER") : "";
-        $this->query = Request::sanitizeInput(getenv('REQUEST_URI'));
-        $this->session_id = $this->resolveSessionIdentifier();
+        $this->refreshRuntimeContext($objUser);
     }
 
     /**
@@ -275,6 +271,27 @@ class Log_Database_Writer
         }
 
         return null;
+    }
+
+    /**
+     * Refresh runtime context on each logger access.
+     * This avoids stale "Anonymous" user data when login happens in the same request.
+     *
+     * @param mixed $objUser
+     */
+    private function refreshRuntimeContext($objUser = null): void
+    {
+        if (is_object($objUser) && isset($objUser->id)) {
+            $this->username = $objUser->id;
+        } elseif ($this->username === null || $this->username === '') {
+            $this->username = "Anonymous";
+        }
+
+        $this->ip = Request::getIpAddress();
+        $this->useragent = Request::sanitizeInput(getenv('HTTP_USER_AGENT'));
+        $this->referrer = Request::hasServerParam("HTTP_REFERER") ? Request::getServerParam("HTTP_REFERER") : "";
+        $this->query = Request::sanitizeInput(getenv('REQUEST_URI'));
+        $this->session_id = $this->resolveSessionIdentifier();
     }
 
     /**
