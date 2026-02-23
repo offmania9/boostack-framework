@@ -458,7 +458,7 @@ class Request
      *
      * @param int|null $status_code The HTTP status code to be used for the error page.
      */
-    public static function goToError(int $status_code = NULL): void
+    public static function goToError(?int $status_code = null): void
     {
         header("Location: " . Config::get("url") . "error/" . ($status_code === null || $status_code === 0 ? "" : $status_code));
         exit();

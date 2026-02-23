@@ -53,7 +53,7 @@ class User_ApiJWTTokenList extends \Boostack\Models\BaseList
      *
      * @param int|null $timestamp_from_revoke The timestamp from which to revoke the items.
      */
-    public function revokeAll(int $timestamp_from_revoke = null): void
+    public function revokeAll(?int $timestamp_from_revoke = null): void
     {
         if (count($this->items) > 0) {
             foreach ($this->items as $item) {

@@ -59,7 +59,7 @@ class Environment
             }
             exit();
         } catch (\PDOException $e) {
-            $short_message = "Database error. See log files.";
+            $short_message = "Database service temporarily unavailable. Please try again in a few minutes.";
             $message = $short_message . $e->getMessage() . $e->getTraceAsString() . "\n";
             Logger::write($message, Log_Level::ERROR, Log_Driver::FILE);
             if (Config::get("developmentMode")) {

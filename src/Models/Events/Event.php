@@ -48,7 +48,7 @@ class Event extends BaseClassTraced
         return $event;
     }
 
-    public function notify($NotificationType = NotificationType::WEB, \DateTime $send_date = NULL): \Boostack\Models\Events\Notification
+    public function notify($NotificationType = NotificationType::WEB, ?\DateTime $send_date = null): \Boostack\Models\Events\Notification
     {
         if (!NotificationType::isValid($NotificationType)) {
             throw new \Exception("NotificationType is not valid");
@@ -62,7 +62,7 @@ class Event extends BaseClassTraced
         return $notification;
     }
 
-    public function createNotification(array $to_user_ids, NotificationType $notificationType = NotificationType::WEB, \DateTime $send_date = NULL): void
+    public function createNotification(array $to_user_ids, NotificationType $notificationType = NotificationType::WEB, ?\DateTime $send_date = null): void
     {
         if (count($to_user_ids) > 0) {
             $notification = new Notification();

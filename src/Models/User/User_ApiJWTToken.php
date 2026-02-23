@@ -152,7 +152,7 @@ class User_ApiJWTToken extends \Boostack\Models\BaseClassTraced
      * @param int|null $timestamp_from_revoke The timestamp from which to revoke the token.
      * @return bool True if the token was successfully revoked, false otherwise.
      */
-    public function revoke(int $timestamp_from_revoke = null): bool
+    public function revoke(?int $timestamp_from_revoke = null): bool
     {
         if (empty($this->revoked_time)) {
             $this->revoked_time = date('Y-m-d H:i:s', time());

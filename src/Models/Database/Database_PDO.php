@@ -76,7 +76,8 @@ class Database_PDO
         } catch (\PDOException $e) {
             $message = "See log file. An error occurred in DB connection:" . $e->getMessage() . $e->getTraceAsString() . "\n";
             Logger::write($message, Log_Level::ERROR, Log_Driver::FILE);
-            throw new \PDOException($e, $e->getCode(), $e);
+            $exceptionCode = is_numeric($e->getCode()) ? (int) $e->getCode() : 0;
+            throw new \PDOException($e->getMessage(), $exceptionCode, $e);
         }
     }
 }
