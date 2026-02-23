@@ -180,6 +180,34 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
                     case '&LT;&GT;':
                         $sql .= ($val === null) ? "$field IS NOT NULL" : "$field != " . $this->PDO->quote($val);
                         break;
+                    case 'IN':
+                        if (is_array($val)) {
+                            if ($val === []) {
+                                $sql .= "1 = 0";
+                            } else {
+                                $quotedValues = array_map(fn($value) => $this->PDO->quote($value), $val);
+                                $sql .= "$field IN (" . implode(', ', $quotedValues) . ")";
+                            }
+                        } elseif (is_string($val) && preg_match('/^\s*\(.+\)\s*$/s', $val)) {
+                            $sql .= "$field IN " . $val;
+                        } else {
+                            $sql .= "$field IN (" . $this->PDO->quote($val) . ")";
+                        }
+                        break;
+                    case 'NOT IN':
+                        if (is_array($val)) {
+                            if ($val === []) {
+                                $sql .= "1 = 1";
+                            } else {
+                                $quotedValues = array_map(fn($value) => $this->PDO->quote($value), $val);
+                                $sql .= "$field NOT IN (" . implode(', ', $quotedValues) . ")";
+                            }
+                        } elseif (is_string($val) && preg_match('/^\s*\(.+\)\s*$/s', $val)) {
+                            $sql .= "$field NOT IN " . $val;
+                        } else {
+                            $sql .= "$field NOT IN (" . $this->PDO->quote($val) . ")";
+                        }
+                        break;
                     case 'LIKE':
                         $sql .= "$field LIKE " . $this->PDO->quote("%$val%");
                         break;
@@ -329,6 +357,34 @@ abstract class BaseList implements \IteratorAggregate, \JsonSerializable
                             $sql .= ($value === null)
                                 ? "$field IS NOT NULL"
                                 : "$field != " . $this->PDO->quote($value);
+                            break;
+                        case 'IN':
+                            if (is_array($value)) {
+                                if ($value === []) {
+                                    $sql .= "1 = 0";
+                                } else {
+                                    $quotedValues = array_map(fn($v) => $this->PDO->quote($v), $value);
+                                    $sql .= "$field IN (" . implode(', ', $quotedValues) . ")";
+                                }
+                            } elseif (is_string($value) && preg_match('/^\s*\(.+\)\s*$/s', $value)) {
+                                $sql .= "$field IN " . $value;
+                            } else {
+                                $sql .= "$field IN (" . $this->PDO->quote($value) . ")";
+                            }
+                            break;
+                        case 'NOT IN':
+                            if (is_array($value)) {
+                                if ($value === []) {
+                                    $sql .= "1 = 1";
+                                } else {
+                                    $quotedValues = array_map(fn($v) => $this->PDO->quote($v), $value);
+                                    $sql .= "$field NOT IN (" . implode(', ', $quotedValues) . ")";
+                                }
+                            } elseif (is_string($value) && preg_match('/^\s*\(.+\)\s*$/s', $value)) {
+                                $sql .= "$field NOT IN " . $value;
+                            } else {
+                                $sql .= "$field NOT IN (" . $this->PDO->quote($value) . ")";
+                            }
                             break;
                         case '=':
                             $sql .= ($value === null)
