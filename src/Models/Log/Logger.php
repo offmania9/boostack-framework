@@ -6,6 +6,7 @@ use Boostack\Models\Log\Database\Log_Database_Writer;
 use Boostack\Models\Log\File\Log_File_Writer;
 use Boostack\Models\Config;
 use Boostack\Models\Auth;
+use Boostack\Models\Session\Session;
 
 /**
  * Boostack: Logger.php
@@ -34,7 +35,7 @@ class Logger
                 if (Config::get('log_on')) {
                     try {
                         Config::constraint("database_on");
-                        $currentUser = Auth::getUserLoggedObject();
+                        $currentUser = self::resolveCurrentUserForLog();
                         Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
                     } catch (\Exception $e) {
                         Log_File_Writer::getInstance()->log($e, $level);
@@ -52,7 +53,7 @@ class Logger
                     try {
                         Log_File_Writer::getInstance()->log($message, $level);
                         Config::constraint("database_on");
-                        $currentUser = Auth::getUserLoggedObject();
+                        $currentUser = self::resolveCurrentUserForLog();
                         Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
                     } catch (\Exception $e) {
                         Log_File_Writer::getInstance()->log($e, $level);
@@ -63,5 +64,40 @@ class Logger
             default:
                 throw new \Exception("Log type not found");
         }
+    }
+
+    /**
+     * Resolve current user for log attribution with robust fallbacks.
+     *
+     * @return object|null
+     */
+    private static function resolveCurrentUserForLog()
+    {
+        try {
+            $currentUser = Auth::getUserLoggedObject();
+            if (
+                is_object($currentUser)
+                && isset($currentUser->id)
+                && is_numeric($currentUser->id)
+                && (int) $currentUser->id > 1
+            ) {
+                return $currentUser;
+            }
+        } catch (\Throwable) {
+            // fallback below
+        }
+
+        try {
+            if (Config::get("session_on")) {
+                $sessionUserId = Session::getUserID();
+                if (is_numeric($sessionUserId) && (int) $sessionUserId > 1) {
+                    return (object) ['id' => (int) $sessionUserId];
+                }
+            }
+        } catch (\Throwable) {
+            // keep null
+        }
+
+        return null;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Boostack\Models\Log\Database;
 
 use Boostack\Models\Database\Database_PDO;
@@ -281,9 +282,14 @@ class Log_Database_Writer
      */
     private function refreshRuntimeContext($objUser = null): void
     {
-        if (is_object($objUser) && isset($objUser->id)) {
-            $this->username = $objUser->id;
-        } elseif ($this->username === null || $this->username === '') {
+        if (
+            is_object($objUser)
+            && isset($objUser->id)
+            && is_numeric($objUser->id)
+            && (int) $objUser->id > 1
+        ) {
+            $this->username = (string) ((int) $objUser->id);
+        } else {
             $this->username = "Anonymous";
         }
 
