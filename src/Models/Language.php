@@ -9,7 +9,7 @@ namespace Boostack\Models;
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 class Language
@@ -118,12 +118,62 @@ class Language
      */
     private static function getLabelsFromLanguage(string $lang)
     {
-        $filePath = $_SERVER['DOCUMENT_ROOT'] ."/" . Config::get("language_path") . $lang . Config::get("language_file_extension");
-        
-        if (!is_file($filePath)) {
-            throw new \Exception("Language file " . $filePath . " not found");
+        $baseFilePath = self::buildLanguageFilePath($lang);
+        if (!is_file($baseFilePath)) {
+            throw new \Exception("Language file " . $baseFilePath . " not found");
         }
+
+        $baseLabels = self::decodeLabelsFromFile($baseFilePath);
+        $variantCode = self::resolveLanguageVariantCode();
+        if ($variantCode === '') {
+            return $baseLabels;
+        }
+
+        $variantFilePath = self::buildLanguageFilePath($lang . '.' . $variantCode);
+        if (!is_file($variantFilePath)) {
+            return $baseLabels;
+        }
+
+        $variantLabels = self::decodeLabelsFromFile($variantFilePath);
+        if (!is_array($variantLabels) || empty($variantLabels)) {
+            return $baseLabels;
+        }
+
+        return array_replace_recursive($baseLabels, $variantLabels);
+    }
+
+    /**
+     * Build full language file path from language code.
+     */
+    private static function buildLanguageFilePath(string $languageCode): string
+    {
+        return $_SERVER['DOCUMENT_ROOT'] . "/" . Config::get("language_path") . $languageCode . Config::get("language_file_extension");
+    }
+
+    /**
+     * Decode language labels JSON from file.
+     *
+     * @return array<string, mixed>
+     */
+    private static function decodeLabelsFromFile(string $filePath): array
+    {
         $jsonFileContent = file_get_contents($filePath);
-        return json_decode($jsonFileContent, true);
+        $decoded = json_decode((string)$jsonFileContent, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Resolve optional language variant code (e.g. license/company profile).
+     */
+    private static function resolveLanguageVariantCode(): string
+    {
+        $variantCode = trim((string)Config::get("language_variant_code"));
+        if ($variantCode === '') {
+            return '';
+        }
+
+        $normalized = strtolower($variantCode);
+        $sanitized = preg_replace('/[^a-z0-9_-]/', '', $normalized);
+        return is_string($sanitized) ? $sanitized : '';
     }
 }
