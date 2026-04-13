@@ -5,7 +5,7 @@ namespace Boostack\Models;
 /**
  * Boostack: Route.php
  * ========================================================================
- * Copyright 2014-2025 Spagnolo Stefano
+ * Copyright 2014-2026 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Stefano Spagnolo

@@ -7,7 +7,7 @@ use Boostack\Models\BaseList;
 /**
  * Boostack: User_SSOList.php
  * ========================================================================
- * Copyright 2014-2025 Spagnolo Stefano
+ * Copyright 2014-2026 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>

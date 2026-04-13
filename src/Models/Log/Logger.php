@@ -11,7 +11,7 @@ use Boostack\Models\Session\Session;
 /**
  * Boostack: Logger.php
  * ========================================================================
- * Copyright 2014-2025 Spagnolo Stefano
+ * Copyright 2014-2026 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Alessio Debernardi
@@ -46,6 +46,7 @@ class Logger
             case Log_Driver::FILE:
                 if (Config::get('log_on')) {
                     Log_File_Writer::getInstance()->log($message, $level);
+                    self::mirrorDatabaseErrorsToDatabaseLog($message, $level);
                 }
                 break;
             case Log_Driver::BOTH:
@@ -99,5 +100,74 @@ class Logger
         }
 
         return null;
+    }
+
+    /**
+     * Mirror SQL/PDO errors logged on FILE to DB as well, so Smartlog can see them.
+     *
+     * This is best-effort: failures while writing DB logs must never break request flow.
+     */
+    private static function mirrorDatabaseErrorsToDatabaseLog($message, $level): void
+    {
+        if (!self::isMirrorableDatabaseError($message, $level)) {
+            return;
+        }
+
+        try {
+            Config::constraint("database_on");
+            $currentUser = self::resolveCurrentUserForLog();
+            Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
+        } catch (\Throwable) {
+            // Keep file log as single source if DB logging is unavailable.
+        }
+    }
+
+    /**
+     * @param mixed $message
+     */
+    private static function isMirrorableDatabaseError($message, $level): bool
+    {
+        if (strtolower((string)$level) !== Log_Level::ERROR) {
+            return false;
+        }
+
+        if ($message instanceof \PDOException) {
+            return true;
+        }
+
+        if ($message instanceof \Throwable) {
+            if (self::throwableChainHasPdoException($message)) {
+                return true;
+            }
+            return self::isSqlStateMessage($message->getMessage());
+        }
+
+        if (is_array($message)) {
+            $candidate = $message['message'] ?? '';
+            return is_string($candidate) && self::isSqlStateMessage($candidate);
+        }
+
+        if (is_string($message)) {
+            return self::isSqlStateMessage($message);
+        }
+
+        return false;
+    }
+
+    private static function throwableChainHasPdoException(\Throwable $throwable): bool
+    {
+        $current = $throwable;
+        while ($current !== null) {
+            if ($current instanceof \PDOException) {
+                return true;
+            }
+            $current = $current->getPrevious();
+        }
+        return false;
+    }
+
+    private static function isSqlStateMessage(string $message): bool
+    {
+        return (bool)preg_match('/SQLSTATE\\[[0-9A-Z]{5}\\]/i', $message);
     }
 }
