@@ -1,9 +1,12 @@
 <?php
+
 namespace Boostack\Models\Database;
+
 use Boostack\Models\Config;
 use Boostack\Models\Log\Logger;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Models\Log\Log_Driver;
+
 /**
  * Boostack: Database_PDO.php
  * ========================================================================
@@ -11,7 +14,7 @@ use Boostack\Models\Log\Log_Driver;
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 /**
@@ -27,9 +30,7 @@ class Database_PDO
     /**
      * Prevents direct instantiation of Database_PDO.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     /**
      * Retrieves the singleton instance of \PDO.
@@ -64,12 +65,16 @@ class Database_PDO
     {
         try {
             Config::constraint("database_on");
+            $charset = self::getConfigOrDefault('db_charset', 'utf8mb4');
+            $collation = self::getConfigOrDefault('db_collation', 'utf8mb4_unicode_ci');
+
             $connection_string = Config::get("driver_pdo") . ':host=' . $host;
             $connection_string .= $port !== null ? ';port=' . $port : '';
             $connection_string .= $dbname !== null ? ';dbname=' . $dbname : '';
+            $connection_string .= ';charset=' . $charset;
 
             $PDO = new \PDO($connection_string, $username, $password, array(
-                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
+                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . $charset . " COLLATE " . $collation
             ));
             $PDO->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             return $PDO;
@@ -78,6 +83,17 @@ class Database_PDO
             Logger::write($message, Log_Level::ERROR, Log_Driver::FILE);
             $exceptionCode = is_numeric($e->getCode()) ? (int) $e->getCode() : 0;
             throw new \PDOException($e->getMessage(), $exceptionCode, $e);
+        }
+    }
+
+    private static function getConfigOrDefault(string $key, string $default): string
+    {
+        try {
+            $value = (string) Config::get($key);
+            $value = trim($value);
+            return $value !== '' ? $value : $default;
+        } catch (\Throwable $e) {
+            return $default;
         }
     }
 }
