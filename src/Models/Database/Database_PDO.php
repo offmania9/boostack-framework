@@ -3,9 +3,6 @@
 namespace Boostack\Models\Database;
 
 use Boostack\Models\Config;
-use Boostack\Models\Log\Logger;
-use Boostack\Models\Log\Log_Level;
-use Boostack\Models\Log\Log_Driver;
 
 /**
  * Boostack: Database_PDO.php
@@ -74,13 +71,15 @@ class Database_PDO
             $connection_string .= ';charset=' . $charset;
 
             $PDO = new \PDO($connection_string, $username, $password, array(
-                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . $charset . " COLLATE " . $collation
+                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . $charset . " COLLATE " . $collation,
+                \PDO::ATTR_TIMEOUT => 5
             ));
             $PDO->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             return $PDO;
         } catch (\PDOException $e) {
-            $message = "See log file. An error occurred in DB connection:" . $e->getMessage() . $e->getTraceAsString() . "\n";
-            Logger::write($message, Log_Level::ERROR, Log_Driver::FILE);
+            // Avoid recursive logging paths when DB connection itself is broken.
+            $message = "[Database_PDO] DB connection failed: " . $e->getMessage();
+            @error_log($message);
             $exceptionCode = is_numeric($e->getCode()) ? (int) $e->getCode() : 0;
             throw new \PDOException($e->getMessage(), $exceptionCode, $e);
         }
