@@ -5,11 +5,11 @@ namespace Boostack\Models;
 /**
  * Boostack: Language.php
  * ========================================================================
- * Copyright 2014-2026 Spagnolo Stefano
+ * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.2
+ * @version 6.0
  */
 
 class Language
@@ -17,9 +17,7 @@ class Language
     /**
      * Prevents direct instantiation of Language.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     protected static $translatedLabels;
     /**
@@ -123,23 +121,15 @@ class Language
             throw new \Exception("Language file " . $baseFilePath . " not found");
         }
 
-        $baseLabels = self::decodeLabelsFromFile($baseFilePath);
         $variantCode = self::resolveLanguageVariantCode();
-        if ($variantCode === '') {
-            return $baseLabels;
+        if ($variantCode !== '') {
+            $variantFilePath = self::buildLanguageFilePath($lang . '.' . $variantCode);
+            if (is_file($variantFilePath)) {
+                return self::decodeLabelsFromFile($variantFilePath);
+            }
         }
 
-        $variantFilePath = self::buildLanguageFilePath($lang . '.' . $variantCode);
-        if (!is_file($variantFilePath)) {
-            return $baseLabels;
-        }
-
-        $variantLabels = self::decodeLabelsFromFile($variantFilePath);
-        if (!is_array($variantLabels) || empty($variantLabels)) {
-            return $baseLabels;
-        }
-
-        return array_replace_recursive($baseLabels, $variantLabels);
+        return self::decodeLabelsFromFile($baseFilePath);
     }
 
     /**
