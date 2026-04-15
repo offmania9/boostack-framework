@@ -5,7 +5,7 @@ use Boostack\Models\Log\Log_Level;
 /**
  * Boostack: Log_File_Writer.php
  * ========================================================================
- * Copyright 2014-2026 Spagnolo Stefano
+ * Copyright 2014-2025 Spagnolo Stefano
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Alessio Debernardi
@@ -32,7 +32,7 @@ class Log_File_Writer
      */
     private function __construct()
     {
-        $path = ROOTPATH . Config::get("log_dir");
+        $path = \ROOTPATH . Config::get("log_dir");
         if (!file_exists($path)) {
             exit("Error: unable to find log dir: $path");
         }
@@ -72,6 +72,14 @@ class Log_File_Writer
         }
         $date = new \DateTime();
         $formattedDate = $date->format(\DateTime::ATOM);
+        if (!is_string($message)) {
+            if ($message === null || is_scalar($message)) {
+                $message = (string)$message;
+            } else {
+                $json = json_encode($message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $message = $json !== false ? $json : print_r($message, true);
+            }
+        }
         $message = "[" . $formattedDate . "] [" . $level . "] " . $message . "\n";
         fwrite($logFile, $message);
         fclose($logFile);
