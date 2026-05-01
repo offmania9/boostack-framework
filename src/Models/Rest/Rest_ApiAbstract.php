@@ -19,7 +19,7 @@ use Boostack\Exceptions\Exception_Validation;
  * Licensed under MIT (https://github.com/offmania9/Boostack/blob/master/LICENSE)
  * ========================================================================
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
- * @version 6.0
+ * @version 6.2
  */
 
 abstract class Rest_ApiAbstract
@@ -139,17 +139,25 @@ abstract class Rest_ApiAbstract
                 }
             }
 
-            if (isset($methodBindings[$this->endpoint])) {
-                $class = $methodBindings[$this->endpoint];
-                $classInstance = new $class("");
-                $this->trackRequest();
-                $this->apiRequest->save();
-                $this->messageBag->data = $classInstance->{$this->endpoint}($this->args);
-                if (empty($this->messageBag->code)) {
-                    $this->messageBag->code = $this->messageBag->error
-                        ? StatusCodes::HTTP_BAD_REQUEST
-                        : StatusCodes::HTTP_OK;
-                }
+                if (isset($methodBindings[$this->endpoint])) {
+                    $class = $methodBindings[$this->endpoint];
+                    $classInstance = new $class("");
+                    $this->trackRequest();
+                    $this->apiRequest->save();
+                    $this->messageBag->data = $classInstance->{$this->endpoint}($this->args);
+                    if (property_exists($classInstance, 'messageBag') && $classInstance->messageBag instanceof \Boostack\Models\MessageBag) {
+                        $endpointBag = $classInstance->messageBag;
+                        $this->messageBag->error = $endpointBag->error;
+                        $this->messageBag->message = $endpointBag->message;
+                        if (!empty($endpointBag->code)) {
+                            $this->messageBag->code = (int)$endpointBag->code;
+                        }
+                    }
+                    if (empty($this->messageBag->code)) {
+                        $this->messageBag->code = $this->messageBag->error
+                            ? StatusCodes::HTTP_BAD_REQUEST
+                            : StatusCodes::HTTP_OK;
+                    }
             } else {
                 throw new \Boostack\Exceptions\Exception_APINotFound("No Endpoint: " . $this->endpoint . ". The resource you requested doesn't exist. For more info, please refer to the documentation.");
             }
