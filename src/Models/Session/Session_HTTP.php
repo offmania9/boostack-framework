@@ -477,7 +477,7 @@ class Session_HTTP
             $token = base64_encode(Utils::getSecureRandomString(32) . self::getRequestInfo() . time());
             $this->$key = $token;
             // store in session
-        } elseif (Auth::isLoggedIn()) {
+        } else {
             $timespan = Config::get("csrf_timeout");
             $decodedToken = base64_decode($this->$key);
             $decodedToken_timestamp = intval(substr($decodedToken, -10));
@@ -485,8 +485,6 @@ class Session_HTTP
             if ($decodedToken_timestamp + $timespan < time()) {
                 $this->CSRFTokenInvalidation();
             }
-        } else {
-            $this->CSRFTokenInvalidation();
         }
         return $this->$key;
     }
@@ -496,7 +494,9 @@ class Session_HTTP
      */
     protected static function getRequestInfo(): string
     {
-        return sha1(Request::sanitizeInput(Request::getIpAddress() . Request::getUserAgent()));
+        // Avoid binding the CSRF token to the client IP because proxy/load balancer
+        // headers can legitimately change between the form render and the POST.
+        return sha1(Request::sanitizeInput((string) Request::getUserAgent()));
     }
 
     /**
@@ -555,7 +555,6 @@ class Session_HTTP
         }
 
         if ($timespan !== null && is_int($timespan) && $decodedToken_timestamp + $timespan < time()) {
-            //d(self::getRequestInfo(), $decodedToken_requestInfo, "rre");
             Logger::write("Attention! CSRF token has expired.", Log_Level::USER, Log_Driver::FILE);
             if ($throwException) {
                 throw new \Exception('Attention! CSRF token has expired.');
