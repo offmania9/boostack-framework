@@ -22,7 +22,7 @@ use Boostack\Models\Request;
  * @author Spagnolo Stefano <s.spagnolo@hotmail.it>
  * @version 6.2
  */
-class Session_HTTP
+class Session_HTTP implements \SessionHandlerInterface
 {
 
     private $php_session_id;
@@ -69,14 +69,7 @@ class Session_HTTP
         $this->session_lifespan = $lifespan;
 
         // Set session save handler
-        session_set_save_handler(
-            array($this, '_session_open_method'),
-            array($this, '_session_close_method'),
-            array($this, '_session_read_method'),
-            array($this, '_session_write_method'),
-            array($this, '_session_destroy_method'),
-            array($this, '_session_gc_method')
-        );
+        session_set_save_handler($this, true);
 
         // Check if PHPSESSID cookie is set
         if (isset($_COOKIE["PHPSESSID"])) {
@@ -154,6 +147,11 @@ class Session_HTTP
         return true;
     }
 
+    public function open(string $path, string $name): bool
+    {
+        return $this->_session_open_method();
+    }
+
 
     /**
      * Method for session close.
@@ -163,6 +161,11 @@ class Session_HTTP
         // Close the database connection
         $this->dbhandle = NULL;
         return true;
+    }
+
+    public function close(): bool
+    {
+        return $this->_session_close_method();
     }
 
     /**
@@ -224,6 +227,11 @@ class Session_HTTP
 
         // Return an empty string
         return "";
+    }
+
+    public function read(string $id): string|false
+    {
+        return $this->_session_read_method($id);
     }
 
     /**
@@ -401,6 +409,11 @@ class Session_HTTP
         return true;
     }
 
+    public function write(string $id, string $data): bool
+    {
+        return $this->_session_write_method($id, $data);
+    }
+
     /**
      * Destroys a session.
      *
@@ -414,6 +427,11 @@ class Session_HTTP
         $q->bindValue(':ascii_session_id', $id);
         $q->execute();
         return $q->execute();
+    }
+
+    public function destroy(string $id): bool
+    {
+        return $this->_session_destroy_method($id);
     }
 
 
@@ -433,6 +451,11 @@ class Session_HTTP
         //        if ($result->execute())
         //            return true;
         //        return false;
+    }
+
+    public function gc(int $max_lifetime): int|false
+    {
+        return $this->_session_gc_method() ? 0 : false;
     }
 
 

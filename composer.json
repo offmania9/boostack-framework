@@ -18,7 +18,7 @@
     }
   ],
   "require": {
-    "php": ">=7.4",
+    "php": ">=8.1",
     "firebase/php-jwt": "^7.0"
   },
   "autoload": {
@@ -37,5 +37,8 @@
     }
   },
   "minimum-stability": "stable",
-  "prefer-stable": true
+  "prefer-stable": true,
+  "require-dev": {
+    "rector/rector": "^2.0"
+  }
 }
