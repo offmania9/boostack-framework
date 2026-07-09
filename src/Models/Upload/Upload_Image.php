@@ -176,7 +176,7 @@ class Upload_Image
                     }
                 }
                 if ($preview_size !== NULL) {
-                    $this->previewResizeToWidth($preview_size[0], $filter);
+                    $this->previewResizeToWidth($preview_size[0] ?? null, $filter);
                 }
             }
         }
