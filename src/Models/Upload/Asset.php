@@ -15,6 +15,10 @@ class Asset extends BaseClassTraced
     protected $type;
     protected $size;
     protected $extension;
+    protected $file_hash_sha256;
+    protected $upload_source;
+    protected $source_context;
+    protected $created_by;
 
     protected $default_values = [
         "object_name" => NULL,
@@ -25,6 +29,10 @@ class Asset extends BaseClassTraced
         "type" => '',
         "size" => 0,
         "extension" => '',
+        "file_hash_sha256" => NULL,
+        "upload_source" => NULL,
+        "source_context" => NULL,
+        "created_by" => NULL,
     ];
 
     const TABLENAME = "boostack_asset";
