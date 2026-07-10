@@ -28,6 +28,11 @@ use Boostack\Models\BaseClassTraced;
  * - technical pipeline state: `process_status`
  * - extracted payloads: `raw_text`, `extracted_json`, `validated_json`,
  *   `prefill_json`, `checks_json`, `metadata_json`
+ * - queue/worker state:
+ *   - `processing_attempts`: number of technical executions already attempted
+ *   - `next_retry_at`: next eligible retry time for deferred processing
+ *   - `claimed_at`: timestamp of the current worker claim
+ *   - `claimed_by`: logical worker identity that claimed the record
  * - audit actors:
  *   - `created_by`: creator of the metadata version row
  *   - `requested_by`: actor that requested processing/reprocessing
@@ -118,7 +123,8 @@ class AssetMetadata extends BaseClassTraced
      * This answers "where is the pipeline right now?".
      *
      * Typical values:
-     * `uploaded`, `extracting`, `ocr_done`, `llm_done`, `validated`, `ready`,
+     * `queued`, `processing`, `uploaded`, `extracting`, `text_extracted`,
+     * `ocr_done`, `llm_done`, `validated`, `ready`, `retry`, `skipped`,
      * `error`.
      *
      * @var string|null
@@ -258,6 +264,37 @@ class AssetMetadata extends BaseClassTraced
     protected $processed_by;
 
     /**
+     * Number of processing executions already attempted for this version row.
+     * It allows scheduled workers to cap retries without losing lineage.
+     *
+     * @var int
+     */
+    protected $processing_attempts;
+
+    /**
+     * Earliest timestamp at which the metadata row becomes eligible for retry.
+     *
+     * @var string|null
+     */
+    protected $next_retry_at;
+
+    /**
+     * Timestamp when a worker claimed this metadata row for processing.
+     * It helps detect stale in-progress jobs in scheduled pipelines.
+     *
+     * @var string|null
+     */
+    protected $claimed_at;
+
+    /**
+     * Logical identifier of the worker that claimed the row.
+     * Example: `cron:asset_metadata_enrichment`.
+     *
+     * @var string|null
+     */
+    protected $claimed_by;
+
+    /**
      * Metadata versions are soft-deleted to preserve history and auditability.
      *
      * @var bool
@@ -298,6 +335,10 @@ class AssetMetadata extends BaseClassTraced
         'created_by' => null,
         'requested_by' => null,
         'processed_by' => null,
+        'processing_attempts' => 0,
+        'next_retry_at' => null,
+        'claimed_at' => null,
+        'claimed_by' => null,
     ];
 
     /**
