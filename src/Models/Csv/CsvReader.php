@@ -14,6 +14,8 @@ class CsvReader
 {
 
     const DEFAULT_DELIMITER = ",";
+    const DEFAULT_ENCLOSURE = '"';
+    const DEFAULT_ESCAPE = "\\";
     const DEFAULT_LINES_OFFSET = 0;
     const DEFAULT_HEADING_LINE = -1;
 
@@ -46,11 +48,11 @@ class CsvReader
         $result = array();
         $rowCount = 0;
         if ($this->linesOffset > 0) {
-            while ($rowCount < $this->linesOffset && ($row = fgetcsv($fileHandler, 0, $this->delimiter)) !== false) {
+            while ($rowCount < $this->linesOffset && ($row = fgetcsv($fileHandler, 0, $this->delimiter, self::DEFAULT_ENCLOSURE, self::DEFAULT_ESCAPE)) !== false) {
                 $rowCount++;
             }
         }
-        while (($row = fgetcsv($fileHandler, 0, $this->delimiter)) !== false) {
+        while (($row = fgetcsv($fileHandler, 0, $this->delimiter, self::DEFAULT_ENCLOSURE, self::DEFAULT_ESCAPE)) !== false) {
 
             $result[] = $row;
             $rowCount++;
@@ -63,12 +65,12 @@ class CsvReader
         if ($this->fileInstance == null) {
             $this->fileInstance = $this->openFile($this->filePath);
             if ($this->linesOffset > 0) {
-                while ($this->rowIndex < $this->linesOffset && ($row = fgetcsv($this->fileInstance, 0, $this->delimiter)) !== false) {
+                while ($this->rowIndex < $this->linesOffset && ($row = fgetcsv($this->fileInstance, 0, $this->delimiter, self::DEFAULT_ENCLOSURE, self::DEFAULT_ESCAPE)) !== false) {
                     $this->rowIndex++;
                 }
             }
         }
-        $row = fgetcsv($this->fileInstance, 0, $this->delimiter);
+        $row = fgetcsv($this->fileInstance, 0, $this->delimiter, self::DEFAULT_ENCLOSURE, self::DEFAULT_ESCAPE);
         $this->rowIndex++;
         return $row;
     }
