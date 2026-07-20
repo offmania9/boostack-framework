@@ -50,16 +50,20 @@ abstract class BaseClassTracedUser extends BaseClassTraced
             return;
         }
 
-        if ($this->hasColumn('created_by') && empty($this->id) && (int)($this->created_by ?? 0) <= 0) {
+        $isNew = empty($this->id);
+
+        if ($this->hasColumn('created_by') && $isNew) {
             $this->created_by = $currentUserId;
         }
 
-        if ($this->hasColumn('updated_by') && (int)($this->updated_by ?? 0) <= 0) {
-            $this->updated_by = $currentUserId;
-            return;
+        if ($this->hasColumn('created_by') && !$isNew) {
+            $persistedState = $this->captureDatabaseState((int)$this->id, true);
+            if ($persistedState !== null && array_key_exists('created_by', $persistedState)) {
+                $this->created_by = $persistedState['created_by'];
+            }
         }
 
-        if ($this->hasColumn('updated_by') && !empty($this->id)) {
+        if ($this->hasColumn('updated_by')) {
             $this->updated_by = $currentUserId;
         }
     }
@@ -172,5 +176,46 @@ abstract class BaseClassTracedUser extends BaseClassTraced
         }
 
         return null;
+    }
+
+    protected function captureDatabaseState(?int $id = null, bool $includeDeleted = true): ?array
+    {
+        $targetId = $id ?? (isset($this->id) ? (int)$this->id : 0);
+        if ($targetId <= 0 || static::TABLENAME === '') {
+            return null;
+        }
+
+        $sql = "SELECT * FROM `" . static::TABLENAME . "` WHERE id = :id";
+        if (!$includeDeleted && $this->hasSoftDelete()) {
+            $sql .= " AND deleted_at IS NULL";
+        }
+
+        $stmt = $this->PDO->prepare($sql);
+        $stmt->bindValue(':id', $targetId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!is_array($row) || $row === []) {
+            return null;
+        }
+
+        return $this->normalizeAuditSnapshot($row);
+    }
+
+    /**
+     * @param array<string,mixed> $snapshot
+     * @return array<string,mixed>
+     */
+    protected function normalizeAuditSnapshot(array $snapshot): array
+    {
+        unset(
+            $snapshot['id'],
+            $snapshot['default_values'],
+            $snapshot['system_excluded'],
+            $snapshot['custom_excluded'],
+            $snapshot['PDO'],
+            $snapshot['soft_delete']
+        );
+
+        return $snapshot;
     }
 }
