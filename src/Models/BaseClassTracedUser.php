@@ -5,6 +5,9 @@ namespace Boostack\Models;
 use Boostack\Models\Auth;
 use Boostack\Models\BaseClassTraced;
 use Boostack\Models\Config;
+use Boostack\Models\Log\Log_Driver;
+use Boostack\Models\Log\Log_Level;
+use Boostack\Models\Log\Logger;
 use Boostack\Models\Session\Session;
 
 abstract class BaseClassTracedUser extends BaseClassTraced
@@ -14,6 +17,8 @@ abstract class BaseClassTracedUser extends BaseClassTraced
 
     /** @var array<string,array<string,bool>> */
     private static array $tableColumnPresenceCache = [];
+    /** @var array<string,bool> */
+    private static array $missingAuditColumnWarningCache = [];
     private ?string $resolvedDatabaseName = null;
 
     protected function init($id = null)
@@ -70,8 +75,13 @@ abstract class BaseClassTracedUser extends BaseClassTraced
 
     protected function syncUserAuditFieldExclusions(): void
     {
-        $this->setCustomExcludedState('created_by', !$this->hasColumn('created_by'));
-        $this->setCustomExcludedState('updated_by', !$this->hasColumn('updated_by'));
+        foreach (['created_by', 'updated_by'] as $field) {
+            $hasColumn = $this->hasColumn($field);
+            $this->setCustomExcludedState($field, !$hasColumn);
+            if (!$hasColumn) {
+                $this->warnMissingAuditColumn($field);
+            }
+        }
     }
 
     private function setCustomExcludedState(string $field, bool $excluded): void
@@ -161,6 +171,26 @@ abstract class BaseClassTracedUser extends BaseClassTraced
         $this->resolvedDatabaseName = $configuredDatabase;
 
         return $this->resolvedDatabaseName;
+    }
+
+    private function warnMissingAuditColumn(string $column): void
+    {
+        $tableName = static::TABLENAME;
+        if ($tableName === '') {
+            return;
+        }
+
+        $cacheKey = $tableName . '.' . $column;
+        if (isset(self::$missingAuditColumnWarningCache[$cacheKey])) {
+            return;
+        }
+
+        self::$missingAuditColumnWarningCache[$cacheKey] = true;
+        Logger::write(
+            "Schema mismatch: expected column `{$column}` not found on table `{$tableName}`. The field will be skipped until the related migration is applied.",
+            Log_Level::WARNING,
+            Log_Driver::FILE
+        );
     }
 
     protected function resolveCurrentUserId(): ?int

@@ -2,7 +2,11 @@
 
 namespace Boostack\Models\Upload;
 
+use Boostack\Models\Config;
 use Boostack\Models\BaseClassTraced;
+use Boostack\Models\Log\Log_Driver;
+use Boostack\Models\Log\Log_Level;
+use Boostack\Models\Log\Logger;
 
 /**
  * Boostack: AssetMetadata.php
@@ -44,6 +48,26 @@ use Boostack\Models\BaseClassTraced;
  */
 class AssetMetadata extends BaseClassTraced
 {
+    /**
+     * Cache of real column presence for partially migrated schemas.
+     *
+     * @var array<string,array<string,bool>>
+     */
+    private static array $tableColumnPresenceCache = [];
+    /**
+     * Cache of schema mismatch warnings already emitted.
+     *
+     * @var array<string,bool>
+     */
+    private static array $missingColumnWarningCache = [];
+
+    /**
+     * Lazily resolved database name used for INFORMATION_SCHEMA checks.
+     *
+     * @var string|null
+     */
+    private ?string $resolvedDatabaseName = null;
+
     /**
      * Foreign key to `boostack_asset.id`.
      * It identifies the physical file this metadata version belongs to.
@@ -358,5 +382,173 @@ class AssetMetadata extends BaseClassTraced
     public function __construct($id = null)
     {
         parent::init($id);
+        $this->syncSchemaColumnExclusions();
+    }
+
+    public function fill($array)
+    {
+        $this->syncSchemaColumnExclusions();
+        return parent::fill($array);
+    }
+
+    public function clearAndFill($array)
+    {
+        $this->syncSchemaColumnExclusions();
+        return parent::clearAndFill($array);
+    }
+
+    public function save($forcedID = null)
+    {
+        $this->syncSchemaColumnExclusions();
+        return parent::save($forcedID);
+    }
+
+    private function syncSchemaColumnExclusions(): void
+    {
+        foreach ($this->getSchemaAwareColumns() as $column) {
+            $isPresent = $this->hasColumn($column);
+            $fieldIndex = array_search($column, $this->custom_excluded, true);
+
+            if (!$isPresent) {
+                if ($fieldIndex === false) {
+                    $this->custom_excluded[] = $column;
+                }
+                $this->warnMissingColumn($column);
+                continue;
+            }
+
+            if ($fieldIndex !== false) {
+                unset($this->custom_excluded[$fieldIndex]);
+                $this->custom_excluded = array_values($this->custom_excluded);
+            }
+        }
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function getSchemaAwareColumns(): array
+    {
+        return [
+            'id_asset',
+            'source',
+            'metadata_type',
+            'process_name',
+            'process_version',
+            'source_context',
+            'document_type',
+            'document_direction',
+            'status',
+            'process_status',
+            'ocr_method',
+            'ocr_language',
+            'raw_text',
+            'extracted_json',
+            'validated_json',
+            'prefill_json',
+            'confidence_score',
+            'summary',
+            'metadata_json',
+            'checks_json',
+            'error_message',
+            'process_started_at',
+            'process_completed_at',
+            'import_id',
+            'supersedes_metadata_id',
+            'created_by',
+            'requested_by',
+            'processed_by',
+            'processing_attempts',
+            'next_retry_at',
+            'claimed_at',
+            'claimed_by',
+            'created_at',
+            'last_update',
+            'last_access',
+            'deleted_at',
+        ];
+    }
+
+    private function hasColumn(string $column): bool
+    {
+        $tableName = static::TABLENAME;
+        if ($tableName === '') {
+            return false;
+        }
+
+        if (!isset(self::$tableColumnPresenceCache[$tableName])) {
+            self::$tableColumnPresenceCache[$tableName] = $this->loadTableColumnPresence($tableName);
+        }
+
+        return self::$tableColumnPresenceCache[$tableName][$column] ?? false;
+    }
+
+    /**
+     * @return array<string,bool>
+     */
+    private function loadTableColumnPresence(string $tableName): array
+    {
+        $databaseName = $this->resolveDatabaseNameForSchemaChecks();
+        if ($databaseName === '') {
+            return [];
+        }
+
+        $stmt = $this->PDO->prepare(
+            'SELECT COLUMN_NAME
+               FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_SCHEMA = :tableSchema
+                AND TABLE_NAME = :tableName'
+        );
+        $stmt->execute([
+            'tableSchema' => $databaseName,
+            'tableName' => $tableName,
+        ]);
+
+        $presence = [];
+        foreach ((array)$stmt->fetchAll(\PDO::FETCH_COLUMN) as $columnName) {
+            $presence[(string)$columnName] = true;
+        }
+
+        return $presence;
+    }
+
+    private function resolveDatabaseNameForSchemaChecks(): string
+    {
+        if ($this->resolvedDatabaseName !== null) {
+            return $this->resolvedDatabaseName;
+        }
+
+        try {
+            $databaseName = $this->PDO->query('SELECT DATABASE()')->fetchColumn();
+            if (is_string($databaseName) && trim($databaseName) !== '') {
+                $this->resolvedDatabaseName = trim($databaseName);
+                return $this->resolvedDatabaseName;
+            }
+        } catch (\Throwable) {
+            // Fallback below.
+        }
+
+        $this->resolvedDatabaseName = trim((string)Config::get('db_name'));
+        return $this->resolvedDatabaseName;
+    }
+
+    private function warnMissingColumn(string $column): void
+    {
+        $tableName = static::TABLENAME;
+        if ($tableName === '') {
+            return;
+        }
+
+        $cacheKey = $tableName . '.' . $column;
+        if (isset(self::$missingColumnWarningCache[$cacheKey])) {
+            return;
+        }
+
+        self::$missingColumnWarningCache[$cacheKey] = true;
+        Logger::write(
+            "Schema mismatch: expected column `{$column}` not found on table `{$tableName}`. The field will be skipped until the related migration is applied.",
+            Log_Level::WARNING,
+            Log_Driver::FILE
+        );
     }
 }
