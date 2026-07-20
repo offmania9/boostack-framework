@@ -171,7 +171,7 @@ abstract class Rest_ApiAbstract
                 $code = StatusCodes::HTTP_BAD_REQUEST;
             }
             $this->_setErrorMessageObject("Validation error", $code, $e->getMessage());
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
         } finally {
             $this->trackRequest();
@@ -231,7 +231,8 @@ abstract class Rest_ApiAbstract
         $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
         $level = $this->resolveLogLevelFromStatus($statusCode);
         $actionTag = $this->resolveActionTag();
-        $message = $this->messageBag->message ?: ('API endpoint: ' . $this->endpoint);
+        $message = $this->buildLogMessage();
+        $responseDataSummary = $this->summarizeLogData($this->messageBag->data);
 
         Logger::write([
             'message' => $message,
@@ -247,8 +248,53 @@ abstract class Rest_ApiAbstract
                 'duration_ms' => $durationMs,
                 'request_id' => $requestId,
                 'is_api' => 1,
+                'response_data_summary' => $responseDataSummary,
             ],
         ], $level);
+    }
+
+    private function buildLogMessage(): string
+    {
+        $message = trim((string) ($this->messageBag->message ?? ''));
+        if ($message === '') {
+            $message = 'API endpoint: ' . $this->endpoint;
+        }
+
+        $detail = $this->summarizeLogData($this->messageBag->data);
+        if ($detail === null || $detail === '') {
+            return $message;
+        }
+
+        if (in_array($message, ['Process API method error', 'Validation error', 'API Too many requests', 'API not found'], true)) {
+            return $message . ': ' . $detail;
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param mixed $data
+     */
+    private function summarizeLogData($data): ?string
+    {
+        if ($data === null) {
+            return null;
+        }
+
+        if (is_scalar($data)) {
+            $value = trim((string) $data);
+            if ($value === '') {
+                return null;
+            }
+            return mb_strlen($value) > 500 ? mb_substr($value, 0, 497) . '...' : $value;
+        }
+
+        $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!is_string($encoded) || trim($encoded) === '') {
+            return null;
+        }
+
+        return mb_strlen($encoded) > 500 ? mb_substr($encoded, 0, 497) . '...' : $encoded;
     }
 
     private function resolveLogLevelFromStatus(int $statusCode): string
