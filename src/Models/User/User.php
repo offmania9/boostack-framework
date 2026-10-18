@@ -353,10 +353,16 @@ class User implements \JsonSerializable
      */
     public function refreshRememberMeCookie(): void
     {
-        $cookieHash = Request::generateCookieHash();
-        $this->session_cookie = $cookieHash;
+        $cookieToken = Request::generateRememberMeToken();
+        $this->session_cookie = hash('sha256', $cookieToken);
         $this->save();
-        setcookie(Config::get("cookie_name"), $cookieHash, time() + Config::get("cookie_expire"), '/');
+        setcookie(Config::get("cookie_name"), $cookieToken, [
+            'expires' => time() + Config::get("cookie_expire"),
+            'path' => '/',
+            'secure' => Request::isHttps(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     }
 
 

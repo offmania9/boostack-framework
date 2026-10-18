@@ -7,6 +7,7 @@ use Boostack\Models\Log\File\Log_File_Writer;
 use Boostack\Models\Config;
 use Boostack\Models\Auth;
 use Boostack\Models\Session\Session;
+use Boostack\Security\SensitiveDataRedactor;
 
 /**
  * Boostack: Logger.php
@@ -30,6 +31,8 @@ class Logger
      */
     public static function write($message = "", $level = Log_Level::INFORMATION, $type = Log_Driver::DATABASE): void
     {
+        $message = SensitiveDataRedactor::redactLogPayload($message);
+
         switch ($type) {
             case Log_Driver::DATABASE:
                 if (Config::get('log_on')) {
@@ -38,7 +41,7 @@ class Logger
                         $currentUser = self::resolveCurrentUserForLog();
                         Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
                     } catch (\Exception $e) {
-                        Log_File_Writer::getInstance()->log($e, $level);
+                        Log_File_Writer::getInstance()->log(SensitiveDataRedactor::redactLogPayload($e), $level);
                         Log_File_Writer::getInstance()->log($message, $level);
                     }
                 }
@@ -57,7 +60,7 @@ class Logger
                         $currentUser = self::resolveCurrentUserForLog();
                         Log_Database_Writer::getInstance($currentUser)->Log($message, $level);
                     } catch (\Exception $e) {
-                        Log_File_Writer::getInstance()->log($e, $level);
+                        Log_File_Writer::getInstance()->log(SensitiveDataRedactor::redactLogPayload($e), $level);
                         Log_File_Writer::getInstance()->log($message, $level);
                     }
                 }

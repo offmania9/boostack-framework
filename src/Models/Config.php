@@ -98,6 +98,35 @@ class Config
         return $value;
     }
 
+    /**
+     * Return whether a configuration key exists without throwing.
+     */
+    public static function has(string $configKey): bool
+    {
+        if (self::$configs === null) {
+            self::$configs = self::init();
+        }
+        $value = self::$configs;
+        foreach (explode('.', $configKey) as $key) {
+            if (!is_array($value) || !array_key_exists($key, $value)) {
+                return false;
+            }
+            $value = $value[$key];
+        }
+        return true;
+    }
+
+    /**
+     * Retrieve a configuration value or return a default when it is absent.
+     *
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function getOrDefault(string $configKey, $default = null)
+    {
+        return self::has($configKey) ? self::get($configKey) : $default;
+    }
+
 
     /**
      * Checks if a configuration attribute meets a specified constraint.

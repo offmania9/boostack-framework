@@ -11,6 +11,7 @@ use Boostack\Models\Auth;
 use Boostack\Models\Log\Logger;
 use Boostack\Models\Log\Log_Level;
 use Boostack\Exceptions\Exception_Validation;
+use Boostack\Security\SensitiveDataRedactor;
 
 /**
  * Boostack: Rest_Api_Abstract.php
@@ -59,11 +60,10 @@ abstract class Rest_ApiAbstract
         $this->messageBag->error = false;
         $this->method = Request::getServerParam('REQUEST_METHOD');
 
-        // Allow for CORS
-        header("Access-Control-Allow-Orgin: *");
+        // Same-origin by default. Cross-origin deployments must terminate CORS at an approved proxy.
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
         header("Content-Type: application/json");
-        header("Access-Control-Allow-Headers: Content-Type, Origin, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+        header("Access-Control-Allow-Headers: Content-Type, Origin, Authorization, X-Requested-With, Idempotency-Key");
 
         switch ($this->method) {
             case 'DELETE':
@@ -117,27 +117,12 @@ abstract class Rest_ApiAbstract
                 throw new \Boostack\Exceptions\Exception_APITooManyRequests("Too many requests. Please wait a few seconds.");
             }
 
-            $methodBindings = [];
-            $subclasses = [];
             $dir = Config::get("api_my_extended_classes_dir");
             $namespace = Config::get("api_my_extended_namespace");
             $declaredClasses = [];
             $this->getDirContents($dir, $declaredClasses);
-
-            foreach ($declaredClasses as $class) {
-                $classReflection = new \ReflectionClass($namespace . $class);
-                if ($classReflection->isSubclassOf('\Boostack\Models\Rest\Rest_ApiAbstract')) {
-                    $subclasses[] = $class;
-                }
-            }
-
-            foreach ($subclasses as $subclass) {
-                $subclass = new \ReflectionClass($namespace . $subclass);
-                $methods = $subclass->getMethods(\ReflectionMethod::IS_PROTECTED);
-                foreach ($methods as $method) {
-                    $methodBindings[$method->name] = $method->class;
-                }
-            }
+            $methodBindings = $this->resolveEndpointBindings($namespace, $declaredClasses);
+            $this->validateEndpointRequest();
 
                 if (isset($methodBindings[$this->endpoint])) {
                     $class = $methodBindings[$this->endpoint];
@@ -170,9 +155,9 @@ abstract class Rest_ApiAbstract
             if ($code < 400 || $code > 599) {
                 $code = StatusCodes::HTTP_BAD_REQUEST;
             }
-            $this->_setErrorMessageObject("Validation error", $code, $e->getMessage());
+            $this->_setErrorMessageObject("Validation error", $code, SensitiveDataRedactor::redactText($e->getMessage()));
         } catch (\Throwable $e) {
-            $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            $this->_setErrorMessageObject("Process API method error", StatusCodes::HTTP_INTERNAL_SERVER_ERROR);
         } finally {
             $this->trackRequest();
             $this->apiRequest->save();
@@ -206,16 +191,17 @@ abstract class Rest_ApiAbstract
         $this->apiRequest->method = $this->method;
         $this->apiRequest->endpoint = $this->endpoint;
         $this->apiRequest->verb = $this->verb;
-        $this->apiRequest->get_args = isset(Request::getQueryArray()["request"]) ? Request::getQueryArray()["request"] : "";
-        $this->apiRequest->post_args = json_encode(Request::getPostArray());
-        $this->apiRequest->file_args = json_encode($this->file);
+        $requestRoute = isset(Request::getQueryArray()["request"]) ? (string) Request::getQueryArray()["request"] : "";
+        $this->apiRequest->get_args = SensitiveDataRedactor::redactText($requestRoute);
+        $this->apiRequest->post_args = json_encode(SensitiveDataRedactor::redactRequestPayload(Request::getPostArray(), $this->endpoint));
+        $this->apiRequest->file_args = json_encode(SensitiveDataRedactor::redactFilePayload($this->file, $this->endpoint));
         $this->apiRequest->remote_address = Request::getIpAddress();
         $this->apiRequest->remote_user_agent = Request::getUserAgent();
         $this->apiRequest->error = $this->messageBag->error ? 1 : 0;
         $this->apiRequest->code = $this->messageBag->code;
-        $this->apiRequest->message = $this->messageBag->message;
+        $this->apiRequest->message = SensitiveDataRedactor::redactText((string) $this->messageBag->message);
 
-        $this->apiRequest->output = static::$outputNoLogged ? "no-logged" : json_encode($this->messageBag->data);
+        $this->apiRequest->output = static::$outputNoLogged ? "no-logged" : json_encode(SensitiveDataRedactor::redact($this->messageBag->data));
     }
 
     /**
@@ -241,7 +227,7 @@ abstract class Rest_ApiAbstract
                 'module' => 'API',
                 'module_key' => 'api',
                 'navigation_key' => $this->endpoint ?: 'api',
-                'route' => Request::getServerParam('REQUEST_URI'),
+                'route' => SensitiveDataRedactor::redactUri((string) Request::getServerParam('REQUEST_URI')),
                 'endpoint' => $this->endpoint,
                 'method' => $this->method,
                 'status_code' => $statusCode,
@@ -255,7 +241,7 @@ abstract class Rest_ApiAbstract
 
     private function buildLogMessage(): string
     {
-        $message = trim((string) ($this->messageBag->message ?? ''));
+        $message = SensitiveDataRedactor::redactText(trim((string) ($this->messageBag->message ?? '')));
         if ($message === '') {
             $message = 'API endpoint: ' . $this->endpoint;
         }
@@ -277,6 +263,7 @@ abstract class Rest_ApiAbstract
      */
     private function summarizeLogData($data): ?string
     {
+        $data = SensitiveDataRedactor::redact($data);
         if ($data === null) {
             return null;
         }
@@ -356,6 +343,63 @@ abstract class Rest_ApiAbstract
         } catch (\Throwable) {
             return uniqid('api_', true);
         }
+    }
+
+    /** @param array<int,string> $declaredClasses @return array<string,string> */
+    private function resolveEndpointBindings(string $namespace, array $declaredClasses): array
+    {
+        $registryClass = (string) Config::getOrDefault('api_endpoint_registry_class', '');
+        if ($registryClass !== '') {
+            if (!$this->isEndpointRegistry($registryClass)) {
+                throw new \RuntimeException('Configured REST endpoint registry is invalid.');
+            }
+            return $registryClass::bindings($namespace, $declaredClasses);
+        }
+
+        // Backwards-compatible discovery. Applications should configure an
+        // explicit registry to obtain a fail-closed endpoint allowlist.
+        $bindings = [];
+        foreach ($declaredClasses as $class) {
+            $reflection = new \ReflectionClass($namespace . $class);
+            if (!$reflection->isSubclassOf(self::class)) {
+                continue;
+            }
+            foreach ($reflection->getMethods(\ReflectionMethod::IS_PROTECTED) as $method) {
+                if ($method->getDeclaringClass()->getName() !== $reflection->getName()) {
+                    continue;
+                }
+                if (isset($bindings[$method->name])) {
+                    throw new \RuntimeException('Duplicate REST endpoint registration: ' . $method->name);
+                }
+                $bindings[$method->name] = $method->class;
+            }
+        }
+        return $bindings;
+    }
+
+    private function validateEndpointRequest(): void
+    {
+        $registryClass = (string) Config::getOrDefault('api_endpoint_registry_class', '');
+        if ($registryClass === '') {
+            return;
+        }
+        if (!$this->isEndpointRegistry($registryClass)) {
+            throw new \RuntimeException('Configured REST endpoint registry is invalid.');
+        }
+        $registryClass::validateRequest(
+            (string) $this->method,
+            (string) Request::getHeaderParam('content-type'),
+            $this->file,
+            $this->endpoint
+        );
+    }
+
+    private function isEndpointRegistry(string $registryClass): bool
+    {
+        return class_exists($registryClass)
+            && (is_subclass_of($registryClass, RestEndpointRegistryInterface::class)
+                || (is_callable([$registryClass, 'bindings'])
+                    && is_callable([$registryClass, 'validateRequest'])));
     }
 
     /**

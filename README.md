@@ -19,6 +19,31 @@ offmania9/boostack require/import automatically offmania9/boostack-framework
 
 Import as vendor: composer require offmania9/boostack
 
+## Security defaults
+
+Boostack includes secure session and remember-me handling, centralized sensitive-data
+redaction, an optional fail-closed REST endpoint registry, and a shared database-backed
+authentication rate limiter.
+
+The base `offmania9/boostack` project installs the required
+`boostack_auth_rate_limit` table as part of its initial database. Existing
+applications upgrading the framework must add the same table through their own
+versioned deployment process. Configure the limiter with:
+
+```php
+$config['auth_rate_limit_on'] = true;
+$config['auth_rate_limit_table'] = 'boostack_auth_rate_limit';
+$config['auth_rate_limit_account_attempts'] = 5;
+$config['auth_rate_limit_network_attempts'] = 25;
+$config['auth_rate_limit_window_seconds'] = 300;
+$config['auth_rate_limit_block_seconds'] = 600;
+```
+
+Applications can provide a REST allowlist and request contract by implementing
+`Boostack\Models\Rest\RestEndpointRegistryInterface` and setting
+`$config['api_endpoint_registry_class']` to that class name. Without this setting,
+legacy protected-method discovery remains available for backwards compatibility.
+
 ## After you get it
 Please refer to the the [Documentation](https://www.getboostack.com/docs) for additional guidance on configuring as 
 * a standalone setup with PHP-Apache-MySQL 

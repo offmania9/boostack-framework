@@ -4,5 +4,6 @@
 .DS_Store
 /composer.lock
 /vendor/*
+test/security/*
 !/vendor/.htaccess
 var/cache

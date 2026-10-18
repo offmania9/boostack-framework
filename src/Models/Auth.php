@@ -11,6 +11,7 @@ use Boostack\Models\Log\Logger;
 use Boostack\Models\Utils\Validator;
 use Boostack\Exceptions\Exception_Registration;
 use Boostack\Models\User\UserPrivilege;
+use Boostack\Security\AuthenticationRateLimiter;
 
 /**
  * Boostack: Auth.php
@@ -42,6 +43,7 @@ class Auth
         $messageBag = new MessageBag();
         $isLockStrategyEnabled = Config::get("lockStrategy_on");
         $isreCaptchaEnabled = Config::get("reCaptcha_on");
+        $sharedRateLimitAttempt = false;
 
         try {
             if (Auth::isLoggedIn()) {
@@ -82,12 +84,18 @@ class Auth
                 throw new Exception_LoginFailed("Invalid CSRF Token validity");
             }
 
+            AuthenticationRateLimiter::assertAllowed((string) $username);
+            $sharedRateLimitAttempt = true;
             Auth::checkAndLogin($username, $password, $cookieRememberMe, true);
+            AuthenticationRateLimiter::recordSuccess((string) $username);
 
             if ($isLockStrategyEnabled) {
                 Session::set("failed_login_count", 0);
             }
         } catch (Exception_LoginFailed $e) {
+            if ($sharedRateLimitAttempt) {
+                AuthenticationRateLimiter::recordFailure((string) $username);
+            }
             if (Config::get("lockStrategy_on")) {
                 $failed_login_count = Session::get("failed_login_count");
                 $failed_login_count = is_numeric($failed_login_count) ? (int)$failed_login_count : 0;
@@ -97,6 +105,9 @@ class Auth
             $messageBag->error = ($e->getMessage());
             $messageBag->code = ($e->getCode());
         } catch (\Exception $e) {
+            if ($sharedRateLimitAttempt) {
+                AuthenticationRateLimiter::recordFailure((string) $username);
+            }
             Logger::write($e, Log_Level::USER);
             $messageBag->error = ($e->getMessage());
             $messageBag->code = ($e->getCode());
@@ -135,22 +146,23 @@ class Auth
         try {
             $userClass = Config::get("use_custom_user_class") ? Config::get("custom_user_class") : User::class;
 
+            if (!Request::isRememberMeTokenFormatValid($cookieValue)) {
+                Logger::write("Invalid remember-me token format.", Log_Level::USER);
+                return false;
+            }
+
             $userCredentials = $userClass::getCredentialByCookie($cookieValue);
 
             if ($userCredentials !== false) {
-                if (Request::checkCookieHashValidity($cookieValue)) {
-                    $usernameToLogin = Config::get("userToLogin") == "email" ? $userCredentials["email"] : $userCredentials["username"];
+                $usernameToLogin = Config::get("userToLogin") == "email" ? $userCredentials["email"] : $userCredentials["username"];
 
-                    $loginResult = self::login($usernameToLogin, "", $userCredentials["pwd"]);
+                $loginResult = self::login($usernameToLogin, "", $userCredentials["pwd"]);
 
-                    // If login is successful, refresh the "remember-me" cookie
-                    if ($loginResult) {
-                        $userObject = Session::getUserObject();
-                        $userObject->refreshRememberMeCookie();
-                        return true;
-                    }
-                } else {
-                    Logger::write("checkCookieHashValidity(" . $cookieValue . "): false - IP:" . Request::getIpAddress(), Log_Level::USER);
+                // If login is successful, refresh the "remember-me" cookie
+                if ($loginResult) {
+                    $userObject = Session::getUserObject();
+                    $userObject->refreshRememberMeCookie();
+                    return true;
                 }
             }
         } catch (\PDOException $e) {
@@ -250,14 +262,23 @@ class Auth
         try {
             if (self::isLoggedIn()) {
                 Logger::write("[Logout] uid: " . Session::getUserID(), Log_Level::USER);
+                $user = Session::getUserObject();
+                if ($user instanceof User) {
+                    $user->session_cookie = null;
+                    $user->save();
+                }
                 // Perform logout by clearing session data
                 Session::logoutUser();
 
                 if (Config::get("cookie_on")) {
                     $cookieName = Config::get("cookie_name");
-                    $cookieExpire = Config::get("cookie_expire");
-                    setcookie($cookieName, false, time() - $cookieExpire);
-                    setcookie($cookieName, false, time() - $cookieExpire, "/");
+                    setcookie($cookieName, '', [
+                        'expires' => time() - 3600,
+                        'path' => '/',
+                        'secure' => Request::isHttps(),
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    ]);
                 }
                 return true;
             }

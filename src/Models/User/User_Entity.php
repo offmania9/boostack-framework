@@ -223,7 +223,8 @@ class User_Entity extends \Boostack\Models\BaseClass
         $PDO = Database_PDO::getInstance();
         $query = "SELECT username,pwd,email FROM " . self::TABLENAME . " WHERE session_cookie = :cookie ";
         $q = $PDO->prepare($query);
-        $q->bindParam(":cookie", $cookieValue);
+        $cookieDigest = hash('sha256', (string) $cookieValue);
+        $q->bindParam(":cookie", $cookieDigest);
         $q->execute();
         if ($q->rowCount() == 1) {
             $res = $q->fetchAll(\PDO::FETCH_ASSOC);

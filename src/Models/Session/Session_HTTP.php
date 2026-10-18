@@ -127,8 +127,14 @@ class Session_HTTP implements \SessionHandlerInterface
             }
         }
 
-        // Set session cookie parameters
-        session_set_cookie_params($this->session_lifespan);
+        // Set session cookie parameters before starting the PHP session.
+        session_set_cookie_params([
+            'lifetime' => $this->session_lifespan,
+            'path' => '/',
+            'secure' => Request::isHttps(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
 
         // Start session if not already started
         if (!session_id()) {
@@ -144,6 +150,9 @@ class Session_HTTP implements \SessionHandlerInterface
      */
     private function _session_open_method(): bool
     {
+        if (!$this->dbhandle instanceof \PDO) {
+            $this->dbhandle = Database_PDO::getInstance();
+        }
         return true;
     }
 
@@ -158,8 +167,8 @@ class Session_HTTP implements \SessionHandlerInterface
      */
     public function _session_close_method(): bool
     {
-        // Close the database connection
-        $this->dbhandle = NULL;
+        // PHP invokes close/open during session_regenerate_id(). Keep the shared
+        // PDO handle available for the read of the newly generated identifier.
         return true;
     }
 
@@ -316,14 +325,26 @@ class Session_HTTP implements \SessionHandlerInterface
      */
     public function logoutUser(): bool
     {
-        $sql = "UPDATE " . $this->http_session_table . " SET logged_in = :logged_in, user_id = :user_id WHERE id = :native_session_id";
+        $sql = "DELETE FROM " . $this->session_variable . " WHERE session_id = :native_session_id";
         $q = $this->dbhandle->prepare($sql);
-        $q->bindValue(':logged_in', 'f');
-        $q->bindValue(':user_id', '1');
+        $q->bindValue(':native_session_id', $this->native_session_id);
+        $q->execute();
+        $sql = "DELETE FROM " . $this->http_session_table . " WHERE id = :native_session_id";
+        $q = $this->dbhandle->prepare($sql);
         $q->bindValue(':native_session_id', $this->native_session_id);
         $q->execute();
         $this->logged_in = false;
         $this->user_id = 0;
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        setcookie(session_name(), '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => Request::isHttps(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         return true;
     }
 
@@ -334,6 +355,7 @@ class Session_HTTP implements \SessionHandlerInterface
      */
     public function loginUser($userID): void
     {
+        $this->rotateSessionIdentifier();
         $this->user_id = $userID;
         $this->logged_in = true;
         $sql = "UPDATE " . $this->http_session_table . " SET logged_in = :logged_in, user_id = :user_id WHERE id = :native_session_id";
@@ -342,6 +364,45 @@ class Session_HTTP implements \SessionHandlerInterface
         $q->bindValue(':user_id', $this->user_id);
         $q->bindValue(':native_session_id', $this->native_session_id);
         $q->execute();
+    }
+
+    private function rotateSessionIdentifier(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE || !$this->native_session_id) {
+            throw new \RuntimeException('Unable to rotate inactive session.');
+        }
+        $originalNativeSessionId = $this->native_session_id;
+        if (!session_regenerate_id(false)) {
+            throw new \RuntimeException('Unable to rotate session identifier.');
+        }
+        $newSessionId = session_id();
+        $transientNativeSessionId = $this->native_session_id;
+        if ($transientNativeSessionId && $transientNativeSessionId !== $originalNativeSessionId) {
+            $q = $this->dbhandle->prepare(
+                "DELETE FROM " . $this->session_variable . " WHERE session_id = :session_id"
+            );
+            $q->bindValue(':session_id', $transientNativeSessionId);
+            $q->execute();
+            $q = $this->dbhandle->prepare(
+                "DELETE FROM " . $this->http_session_table . " WHERE id = :session_id"
+            );
+            $q->bindValue(':session_id', $transientNativeSessionId);
+            $q->execute();
+        }
+        $sql = "UPDATE " . $this->http_session_table . "
+                SET ascii_session_id = :ascii_session_id, created = :created, user_agent = :user_agent
+                WHERE id = :native_session_id";
+        $q = $this->dbhandle->prepare($sql);
+        $q->bindValue(':ascii_session_id', $newSessionId);
+        $q->bindValue(':created', time(), \PDO::PARAM_INT);
+        $q->bindValue(':user_agent', Request::getUserAgent());
+        $q->bindValue(':native_session_id', $originalNativeSessionId);
+        $q->execute();
+        if ($q->rowCount() !== 1) {
+            throw new \RuntimeException('Session rotation was not persisted.');
+        }
+        $this->native_session_id = $originalNativeSessionId;
+        $this->php_session_id = $newSessionId;
     }
 
     /**
@@ -425,7 +486,6 @@ class Session_HTTP implements \SessionHandlerInterface
         $sql = "DELETE FROM " . $this->http_session_table . " WHERE ascii_session_id = :ascii_session_id";
         $q = $this->dbhandle->prepare($sql);
         $q->bindValue(':ascii_session_id', $id);
-        $q->execute();
         return $q->execute();
     }
 
@@ -554,10 +614,10 @@ class Session_HTTP implements \SessionHandlerInterface
         }
 
         if ($postArray[$key] !== $sessionToken) {
-            Logger::write('Attention! Invalid CSRF token. POST:' . $postArray[$key] . '  - SESSTOKEN:' . $sessionToken, Log_Level::USER, Log_Driver::FILE);
+            Logger::write('Attention! Invalid CSRF token.', Log_Level::USER, Log_Driver::FILE);
             if ($throwException) {
                 $this->CSRFTokenInvalidation();
-                throw new \Exception('Attention! Invalid CSRF token. POST:' . $postArray[$key] . '  - SESSTOKEN:' . $sessionToken);
+                throw new \Exception('Attention! Invalid CSRF token.');
             } else {
                 $this->CSRFTokenInvalidation();
                 return false;
@@ -618,8 +678,8 @@ class Session_HTTP implements \SessionHandlerInterface
         try {
             return $this->CSRFCheckTokenValidity($postArray, $throwException);
         } catch (\Exception $e) {
-            Logger::write('Session_CSRF -> CSRFCheckValidity -> Caught \Exception: ' . $e->getMessage() . $e->getTraceAsString(), Log_Level::ERROR);
-            throw new \Exception('Invalid CSRF token' . $e->getMessage(), $e->getCode(), $e);
+            Logger::write('Session_CSRF -> CSRF validation failed.', Log_Level::ERROR);
+            throw new \Exception('Invalid CSRF token', $e->getCode(), $e);
         }
     }
 }

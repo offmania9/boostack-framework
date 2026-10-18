@@ -46,6 +46,13 @@ class Request
         return HttpMethod::from(self::$server['REQUEST_METHOD']);
     }
 
+    public static function isHttps(): bool
+    {
+        return self::hasServerParam('HTTPS')
+            && strtolower((string) self::getServerParam('HTTPS')) !== 'off'
+            && (string) self::getServerParam('HTTPS') !== '0';
+    }
+
     /**
      * Checks if a parameter exists in a specific request type.
      *
@@ -150,23 +157,23 @@ class Request
      *
      * @param string $param The parameter name.     
      * @param mixed $default Default value if parameter is not set.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getPostParam(string $param, $default = null)
     {
         $rt = RequestType::POST;
         $value = self::get($rt, $param);
-        return $value !== null ? self::sanitizeInput($value) : $default;
+        return $value !== null ? $value : $default;
     }
 
     /**
      * Retrieves all POST parameters.
      *
-     * @return array|string The sanitized POST parameters.
+     * @return array|string The raw POST parameters.
      */
     public static function getPostArray()
     {
-        return self::sanitizeInput(self::$post);
+        return self::$post;
     }
 
     /**
@@ -178,7 +185,7 @@ class Request
      */
     public static function setPostParam(string $key, mixed $value): void
     {
-        self::$post[$key] = self::sanitizeInput($value);
+        self::$post[$key] = $value;
     }
 
     /**
@@ -197,13 +204,13 @@ class Request
      *
      * @param string $param The parameter name.
      * @param mixed $default Default value if parameter is not set.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getQueryParam(string $param, $default = null)
     {
         $rt = RequestType::QUERY;
         $value = self::get($rt, $param);
-        return $value !== null ? self::sanitizeInput($value) : $default;
+        return $value !== null ? $value : $default;
     }
 
     /**
@@ -215,18 +222,18 @@ class Request
      */
     public static function setQueryParam(string $key, mixed $value): void
     {
-        self::$query[$key] = self::sanitizeInput($value);
+        self::$query[$key] = $value;
     }
 
 
     /**
      * Retrieves all QUERY parameters.
      *
-     * @return array|string The sanitized QUERY parameters.
+     * @return array|string The raw QUERY parameters.
      */
     public static function getQueryArray()
     {
-        return self::sanitizeInput(self::$query);
+        return self::$query;
     }
 
     /**
@@ -245,22 +252,22 @@ class Request
      * Retrieves a SERVER parameter value.
      *
      * @param string $param The parameter name.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getServerParam(string $param)
     {
         $rt = RequestType::SERVER;
-        return self::sanitizeInput(self::get($rt, $param));
+        return self::get($rt, $param);
     }
 
     /**
      * Retrieves all SERVER parameters.
      *
-     * @return array|string The sanitized SERVER parameters.
+     * @return array|string The raw SERVER parameters.
      */
     public static function getServerArray()
     {
-        return self::sanitizeInput(self::$server);
+        return self::$server;
     }
 
     /**
@@ -278,22 +285,22 @@ class Request
      * Retrieves a HEADER parameter value.
      *
      * @param string $param The parameter name.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getHeaderParam(string $param)
     {
         $rt = RequestType::HEADERS;
-        return self::sanitizeInput(self::get($rt, $param));
+        return self::get($rt, $param);
     }
 
     /**
      * Retrieves all HEADER parameters.
      *
-     * @return array|string The sanitized HEADER parameters.
+     * @return array|string The raw HEADER parameters.
      */
     public static function getHeaderArray()
     {
-        return self::sanitizeInput(self::$headers);
+        return self::$headers;
     }
 
     /**
@@ -311,21 +318,21 @@ class Request
      * Retrieves a COOKIE parameter value.
      *
      * @param string $param The parameter name.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getCookieParam(string $param)
     {
         $rt = RequestType::COOKIE;
-        return self::sanitizeInput(self::get($rt, $param));
+        return self::get($rt, $param);
     }
     /**
      * Retrieves all COOKIE parameters.
      *
-     * @return array|string The sanitized COOKIE parameters.
+     * @return array|string The raw COOKIE parameters.
      */
     public static function getCookieArray()
     {
-        return self::sanitizeInput(self::$cookie);
+        return self::$cookie;
     }
 
     /**
@@ -343,12 +350,12 @@ class Request
      * Retrieves a REQUEST parameter value.
      *
      * @param string $param The parameter name.
-     * @return mixed|null|string The sanitized parameter value.
+     * @return mixed|null|string The raw parameter value.
      */
     public static function getRequestParam(string $param)
     {
         $rt = RequestType::REQUEST;
-        return self::sanitizeInput(self::get($rt, $param));
+        return self::get($rt, $param);
     }
 
     /**
@@ -360,17 +367,17 @@ class Request
      */
     public static function setRequestParam(string $key, mixed $value): void
     {
-        self::$request[$key] = self::sanitizeInput($value);
+        self::$request[$key] = $value;
     }
 
     /**
      * Retrieves all REQUEST parameters.
      *
-     * @return array|string The sanitized REQUEST parameters.
+     * @return array|string The raw REQUEST parameters.
      */
     public static function getRequestArray()
     {
-        return self::sanitizeInput(self::$request);
+        return self::$request;
     }
 
     /**
@@ -500,11 +507,11 @@ class Request
     }
 
     /**
-     * Sanitizes input data to prevent XSS attacks.
+     * Escapes data for HTML output contexts.
      *
-     * @param array|string $array The input data to be sanitized.
+     * @param array|string $array The input data to be escaped.
      * @param string $encoding The character encoding (default is 'UTF-8').
-     * @return array|string The sanitized input data.
+     * @return array|string The escaped input data.
      */
     public static function sanitizeInput($data, $encoding = 'UTF-8')
     {
@@ -518,31 +525,42 @@ class Request
             return $data;
         }
     }
-
-
-
-    /*
- * Generates the value of the remember-me cookie.
- */
     /**
-     * Generates a hash for the remember-me cookie based on current time, IP address, and user agent.
+     * Generates a cryptographically secure token for persistent login.
      *
-     * @return string The generated cookie hash.
+     * The raw token is intended for the client cookie. Applications should
+     * persist only a one-way digest of it on the server.
      */
-    public static function generateCookieHash(): string
+    public static function generateRememberMeToken(): string
     {
-        return  md5(time()) . md5(self::getIpAddress() . self::getUserAgent());
+        return bin2hex(random_bytes(32));
     }
 
     /**
-     * Checks the validity of the remember-me cookie hash.
+     * Checks only the expected encoding and length of a remember-me token.
      *
-     * @param string $cookieValue The value of the remember-me cookie.
-     * @return bool True if the cookie hash is valid, false otherwise.
+     * Token authenticity must be established by matching its server-side
+     * digest; this method does not authenticate or authorize the token.
+     */
+    public static function isRememberMeTokenFormatValid($cookieValue): bool
+    {
+        return is_string($cookieValue) && preg_match('/^[a-f0-9]{64}$/D', $cookieValue) === 1;
+    }
+
+    /**
+     * @deprecated Use generateRememberMeToken().
+     */
+    public static function generateCookieHash(): string
+    {
+        return self::generateRememberMeToken();
+    }
+
+    /**
+     * @deprecated Use isRememberMeTokenFormatValid().
      */
     public static function checkCookieHashValidity($cookieValue): bool
     {
-        return substr($cookieValue, 32) === md5(self::getIpAddress() . self::getUserAgent());
+        return self::isRememberMeTokenFormatValid($cookieValue);
     }
 
     /**
