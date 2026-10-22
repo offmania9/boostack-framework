@@ -24,7 +24,7 @@ return static function (RectorConfig $rectorConfig): void {
 
     // Applica i set di regole desiderati
     $rectorConfig->sets([
-        SetList::PHP_82, // Assicurati che corrisponda alla tua versione di PHP o a una versione target
+        SetList::PHP_84, // Mantieni le regole di migrazione allineate alla versione PHP minima supportata
         SetList::CODE_QUALITY,
         SetList::DEAD_CODE,
         SetList::NAMING,

@@ -18,8 +18,8 @@
     }
   ],
   "require": {
-    "php": ">=8.1",
-    "firebase/php-jwt": "^7.0"
+    "php": ">=8.4.27",
+    "firebase/php-jwt": "^7.2"
   },
   "autoload": {
     "files": [
@@ -31,14 +31,14 @@
     }
   },
   "config": {
-    "sort-packages": true,
-    "allow-plugins": {
-      "composer/package-versions-deprecated": true
-    }
+    "audit": {
+      "block-insecure": true
+    },
+    "sort-packages": true
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "require-dev": {
-    "rector/rector": "^2.0"
+    "rector/rector": "^2.7"
   }
 }
